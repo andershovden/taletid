@@ -5,7 +5,8 @@ function corsHeaders() {
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "*",
     "access-control-allow-headers": "content-type",
-    "access-control-allow-methods": "GET, POST, OPTIONS"
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "cache-control": "no-store"
   };
 }
 
@@ -21,19 +22,11 @@ export default async (req) => {
   }
 
   if (req.method === "GET") {
-    const state = (await store.get("state", { type: "json" })) || { speakers: [] };
-    const finishedIds = new Set((state.speakers || []).filter((s) => s.finished).map((s) => s.id));
+    // Gjetninger er åpne for alle med en gang de sendes inn (per taler),
+    // slik at gjestene kan se hva andre har tippet mens de venter. Fasit/poeng
+    // vises først når admin markerer taleren som ferdig (styres i index.html).
     const all = (await store.get("guesses", { type: "json" })) || {};
-    const filtered = {};
-    for (const key of Object.keys(all)) {
-      const rec = all[key] || {};
-      const entries = {};
-      for (const spId of Object.keys(rec.entries || {})) {
-        if (finishedIds.has(spId)) entries[spId] = rec.entries[spId];
-      }
-      filtered[key] = { name: rec.name, entries, updatedAt: rec.updatedAt };
-    }
-    return new Response(JSON.stringify({ guesses: filtered }), { headers: corsHeaders() });
+    return new Response(JSON.stringify({ guesses: all }), { headers: corsHeaders() });
   }
 
   if (req.method === "POST") {
