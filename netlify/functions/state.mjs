@@ -38,7 +38,8 @@ function sanitizeState(input) {
       name: typeof sp.name === "string" && sp.name.trim() ? sp.name.slice(0, 80) : "Uten navn",
       order: i,
       finished: !!sp.finished,
-      actualSeconds: Number.isFinite(sp.actualSeconds) ? Math.max(0, Math.round(sp.actualSeconds)) : null
+      actualSeconds: Number.isFinite(sp.actualSeconds) ? Math.max(0, Math.round(sp.actualSeconds)) : null,
+      coupleGuessSeconds: Number.isFinite(sp.coupleGuessSeconds) ? Math.max(0, Math.round(sp.coupleGuessSeconds)) : null
     }));
   }
   return out;
