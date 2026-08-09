@@ -11,8 +11,15 @@ function corsHeaders() {
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "*",
     "access-control-allow-headers": "content-type, x-admin-key",
-    "access-control-allow-methods": "GET, POST, OPTIONS"
+    "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
+    "cache-control": "no-store"
   };
+}
+
+function checkAdminKey(req) {
+  const adminKey = req.headers.get("x-admin-key") || "";
+  const expected = (typeof Netlify !== "undefined" && Netlify.env.get("ADMIN_KEY")) || "bryllup2026";
+  return adminKey === expected;
 }
 
 function sanitizeState(input) {
@@ -50,9 +57,7 @@ export default async (req) => {
   }
 
   if (req.method === "POST") {
-    const adminKey = req.headers.get("x-admin-key") || "";
-    const expected = (typeof Netlify !== "undefined" && Netlify.env.get("ADMIN_KEY")) || "bryllup2026";
-    if (adminKey !== expected) {
+    if (!checkAdminKey(req)) {
       return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: corsHeaders() });
     }
     let body;
@@ -64,6 +69,17 @@ export default async (req) => {
     const clean = sanitizeState(body || {});
     await store.setJSON("state", clean);
     return new Response(JSON.stringify({ ok: true, state: clean }), { headers: corsHeaders() });
+  }
+
+  if (req.method === "DELETE") {
+    if (!checkAdminKey(req)) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: corsHeaders() });
+    }
+    // Nullstiller alt: talerliste, resultater og gjestenes gjetninger. Brukes for å rydde opp
+    // etter testing før selve bryllupet.
+    await store.setJSON("state", DEFAULT_STATE);
+    await store.delete("guesses");
+    return new Response(JSON.stringify({ ok: true, state: DEFAULT_STATE }), { headers: corsHeaders() });
   }
 
   return new Response("Method not allowed", { status: 405, headers: corsHeaders() });
