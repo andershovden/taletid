@@ -65,6 +65,28 @@
     color:var(--charcoal-soft);
     margin-bottom:8px;
   }
+  .couple-guess-row{
+    display:flex;
+    align-items:baseline;
+    gap:6px;
+    background:var(--cream);
+    border-radius:10px;
+    padding:8px 12px;
+    margin-bottom:10px;
+    font-size:13px;
+  }
+  .couple-guess-label{
+    color:var(--charcoal-soft);
+    font-weight:600;
+  }
+  .couple-guess-value{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:17px;
+    color:var(--gold);
+    font-variant-numeric:tabular-nums;
+    margin-left:auto;
+  }
 </style>
 </head>
 <body>
@@ -275,6 +297,9 @@
 
     speakers.forEach(sp => {
       const rawGuesses = guessListForSpeaker(sp.id);
+      const coupleGuessHtml = sp.coupleGuessSeconds != null
+        ? '<div class="couple-guess-row">💑 <span class="couple-guess-label">Brudeparet gjettet:</span> <span class="couple-guess-value">'+A.fmt(sp.coupleGuessSeconds)+'</span></div>'
+        : '';
       html += '<div class="speaker-result">';
 
       if(sp.finished){
@@ -286,6 +311,7 @@
         const minDiff = guesses.length ? guesses[0].diff : null;
 
         html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="actual">'+A.fmt(sp.actualSeconds)+'</span></div>';
+        html += coupleGuessHtml;
 
         if(guesses.length === 0){
           html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen gjettet på denne taleren.</div>';
@@ -305,6 +331,7 @@
         // Ikke ferdig ennå: vis kun hva folk har gjettet så langt, uten fasit
         const guesses = rawGuesses.slice().sort((a,b) => a.guess - b.guess);
         html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="pill wait">Venter</span></div>';
+        html += coupleGuessHtml;
 
         if(guesses.length === 0){
           html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen har gjettet på denne ennå.</div>';
