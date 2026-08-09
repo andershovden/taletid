@@ -118,6 +118,7 @@
   let guessesData = {};
   let myEntries = JSON.parse(localStorage.getItem('wg_my_entries') || '{}');
   let winnerCelebrated = false;
+  let lastRenderedKey = null; // brukes for å unngå å bygge skjemaet på nytt (og slette det brukeren skriver) ved hver auto-oppdatering
 
   guestNameInput.value = localStorage.getItem('wg_guest_name') || '';
 
@@ -134,7 +135,29 @@
 
   function renderGuessForm(){
     const unfinished = (state.speakers || []).filter(s => !s.finished);
+
+    // Bygg en nøkkel som kun endrer seg når settet av "aktive" talere faktisk endrer seg
+    // (ikke ved hver 6-sekunders auto-oppdatering). Rekkefølge har ikke noe å si her.
+    const key = unfinished.map(s => s.id).slice().sort().join(',') + '|' + (state.speakers ? state.speakers.length : 0);
+    if(key === lastRenderedKey){
+      // Ingenting har endret seg for gjettefeltene — ikke rør DOM-en, så vi ikke
+      // sletter det brukeren står og skriver inn akkurat nå.
+      submitBtn.disabled = unfinished.length === 0;
+      return;
+    }
+
+    // Fanger opp verdier brukeren evt. har rukket å skrive inn før vi bygger på nytt,
+    // slik at en ekte endring (f.eks. ny taler lagt til) ikke sletter det som er skrevet.
+    const liveVals = {};
+    speakerInputs.querySelectorAll('input[data-speaker]').forEach(inp => {
+      const id = inp.getAttribute('data-speaker');
+      liveVals[id] = liveVals[id] || {};
+      liveVals[id][inp.getAttribute('data-part')] = inp.value;
+    });
+
+    lastRenderedKey = key;
     speakerInputs.innerHTML = '';
+
     if(!state.speakers || state.speakers.length === 0){
       speakerInputs.innerHTML = '<div class="empty-note">Ingen talere er lagt inn ennå. Sjekk tilbake litt senere!</div>';
       submitBtn.disabled = true;
@@ -149,9 +172,16 @@
     unfinished.forEach(sp => {
       const row = document.createElement('div');
       row.className = 'speaker-row-input';
+      const live = liveVals[sp.id];
       const existing = myEntries[sp.id];
-      const min = existing != null ? Math.floor(existing/60) : '';
-      const sec = existing != null ? existing%60 : '';
+      let min = '', sec = '';
+      if(live && (live.min !== '' || live.sec !== '')){
+        min = live.min || '';
+        sec = live.sec || '';
+      } else if(existing != null){
+        min = Math.floor(existing/60);
+        sec = existing%60;
+      }
       row.innerHTML =
         '<div class="name">'+escapeHtml(sp.name)+'</div>'+
         '<input type="number" min="0" placeholder="min" data-speaker="'+sp.id+'" data-part="min" value="'+min+'">'+
