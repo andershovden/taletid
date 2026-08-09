@@ -759,7 +759,7 @@
   <div class="modal-content">
     <h2>Talere &amp; innstillinger</h2>
     <div class="modal-sub">Alle talere er bedt om å holde seg innenfor 5–7 minutter. Dette gjelder likt for alle, og styrer fargene på skjermen.</div>
-    <div class="rule-note">💛 Min/sek-feltene under er <strong>brudeparets private gjetning</strong> — vises kun her, aldri på gjestenes side. Når du trykker «Ferdig ✓» på en taler, publiseres kun det <strong>faktiske resultatet</strong> til gjestenes gjettekonkurranse-side.</div>
+    <div class="rule-note">💛 Min/sek-feltene under er <strong>brudeparets gjetning</strong>. Den vises øverst under hver taler på gjestenes side (med en gang du lagrer), slik at alle kan se hva brudeparet tippet. Når du trykker «Ferdig ✓» på en taler, publiseres i tillegg det <strong>faktiske resultatet</strong> til gjettekonkurransen.</div>
 
     <div class="settings-fields">
       <input type="text" id="coupleNamesInput" placeholder="Brudeparets navn">
@@ -992,11 +992,19 @@
           .sort((a,b)=>(a.order||0)-(b.order||0))
           .map(srv => {
             const local = byId[srv.id];
+            let min = local ? local.min : 0;
+            let sec = local ? local.sec : 0;
+            // Om denne nettleseren ikke har en privat gjetning lagret ennå, men serveren
+            // har en (satt fra en annen enhet), bruk den i stedet for 0:00.
+            if(!min && !sec && srv.coupleGuessSeconds != null){
+              min = Math.floor(srv.coupleGuessSeconds/60);
+              sec = srv.coupleGuessSeconds % 60;
+            }
             return {
               id: srv.id,
               name: srv.name,
-              min: local ? local.min : 0,
-              sec: local ? local.sec : 0,
+              min: min,
+              sec: sec,
               finished: !!srv.finished,
               actualSeconds: srv.actualSeconds != null ? srv.actualSeconds : null
             };
@@ -1025,7 +1033,8 @@
         name: sp.name,
         order: i,
         finished: !!sp.finished,
-        actualSeconds: sp.actualSeconds != null ? sp.actualSeconds : null
+        actualSeconds: sp.actualSeconds != null ? sp.actualSeconds : null,
+        coupleGuessSeconds: plannedSeconds(sp) > 0 ? plannedSeconds(sp) : null
       }))
     };
     try{
