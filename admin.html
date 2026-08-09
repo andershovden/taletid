@@ -445,6 +445,8 @@
   button.primary.stop:hover{background:#c96a52;border-color:#c96a52;}
   button.primary.finish{background:var(--sage);border-color:var(--sage);}
   button.primary.finish:hover{background:#9db092;border-color:#9db092;}
+  button.danger{color:var(--red);border-color:var(--red-light);}
+  button.danger:hover{background:var(--red);border-color:var(--red);color:#fff;}
   button:disabled{opacity:0.35;cursor:not-allowed;}
   button:disabled:hover{border-color:var(--line);color:var(--charcoal);}
 
@@ -781,9 +783,11 @@
     <div class="modal-actions">
       <div class="left-actions">
         <button id="pullBtn">🔄 Hent fra server</button>
+        <button id="resetAllBtn" class="danger">🗑️ Nullstill alt</button>
       </div>
       <button id="closeModalBtn" class="primary">Lagre &amp; lukk</button>
     </div>
+    <div class="field-hint" style="text-align:left;margin-top:8px;">«Nullstill alt» sletter talerlisten, resultater og alle gjestenes gjetninger permanent — kun til bruk under testing.</div>
   </div>
 </div>
 
@@ -883,6 +887,7 @@
   const editModal = document.getElementById('editModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const pullBtn = document.getElementById('pullBtn');
+  const resetAllBtn = document.getElementById('resetAllBtn');
   const speakerListEditor = document.getElementById('speakerListEditor');
   const addSpeakerBtn = document.getElementById('addSpeakerBtn');
   const newName = document.getElementById('newName');
@@ -954,6 +959,15 @@
     const res = await fetch(path, { method:'POST', headers, body: JSON.stringify(body) });
     const data = await res.json().catch(()=>({}));
     if(!res.ok){ const err = new Error(data.error || ('POST failed: '+res.status)); err.status = res.status; throw err; }
+    return data;
+  }
+  async function apiDelete(path){
+    const headers = {};
+    const key = adminKeyInput.value || localStorage.getItem(LS_ADMIN_KEY) || '';
+    if(key) headers['x-admin-key'] = key;
+    const res = await fetch(path, { method:'DELETE', headers });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ const err = new Error(data.error || ('DELETE failed: '+res.status)); err.status = res.status; throw err; }
     return data;
   }
 
@@ -1428,6 +1442,36 @@
     render();
     pullBtn.disabled = false;
     pullBtn.textContent = '🔄 Hent fra server';
+  });
+  resetAllBtn.addEventListener('click', async () => {
+    const sure = confirm('Dette sletter ALLE talere, resultater og gjestenes gjetninger permanent — både her og på gjestenes side. Er du sikker?');
+    if(!sure) return;
+    const sureAgain = confirm('Helt sikker? Dette kan ikke angres.');
+    if(!sureAgain) return;
+
+    resetAllBtn.disabled = true;
+    resetAllBtn.textContent = 'Nullstiller...';
+    try{
+      await apiDelete('/api/state');
+      pauseTimer();
+      elapsedMs = 0;
+      currentIndex = 0;
+      speakers = [];
+      resetOvertimeState();
+      saveSpeakers();
+      coupleNamesDisplay.textContent = 'Karoline & Peter';
+      weddingDateDisplay.textContent = '4.–5. september 2026';
+      coupleNamesInput.value = coupleNamesDisplay.textContent;
+      weddingDateInput.value = weddingDateDisplay.textContent;
+      saveBrand();
+      renderEditor();
+      render();
+      setSyncStatus('🟢 Alt er nullstilt — både lokalt og på Netlify');
+    }catch(e){
+      setSyncStatus(e.status === 401 ? '🔴 Feil admin-nøkkel — fikk ikke nullstilt serveren' : '🟡 Kunne ikke nå serveren — prøv igjen');
+    }
+    resetAllBtn.disabled = false;
+    resetAllBtn.textContent = '🗑️ Nullstill alt';
   });
   closeModalBtn.addEventListener('click', async () => {
     saveBrand();
