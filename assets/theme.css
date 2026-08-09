@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Montserrat:wght@400;500;600;700&display=swap');
+
+:root{
+  --ivory:#faf5ee;
+  --cream:#f2e9dc;
+  --charcoal:#3a332c;
+  --charcoal-soft:#6b6055;
+  --gold:#b8935a;
+  --gold-light:#d9bd8c;
+  --rose:#c98e86;
+  --sage:#8a9a7e;
+  --amber:#c99a4b;
+  --red:#b5533c;
+  --red-light:#d97a5f;
+  --line:#e4d8c4;
+  --shadow: 0 10px 40px rgba(58,51,44,0.08);
+}
+*{box-sizing:border-box;}
+html,body{
+  margin:0;padding:0;
+  background:var(--ivory);
+  color:var(--charcoal);
+  font-family:'Montserrat',sans-serif;
+}
+h1,h2,h3{font-family:'Cormorant Garamond',serif;margin:0;}
+.container{max-width:640px;margin:0 auto;padding:28px 20px 70px;}
+.brand{text-align:center;margin-bottom:22px;}
+.brand-names{
+  font-family:'Cormorant Garamond',serif;
+  font-style:italic;
+  font-weight:600;
+  font-size:clamp(24px,6vw,34px);
+  color:var(--gold);
+  letter-spacing:0.06em;
+}
+.brand-date{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.2em;
+  color:var(--charcoal-soft);
+  margin-top:4px;
+}
+.card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:20px;
+  margin-bottom:16px;
+  box-shadow:var(--shadow);
+}
+.card h2{
+  font-size:24px;
+  font-weight:700;
+  margin-bottom:4px;
+}
+.card .sub{
+  font-size:13px;
+  color:var(--charcoal-soft);
+  margin-bottom:16px;
+  line-height:1.5;
+}
+label{
+  display:block;
+  font-size:11px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--charcoal-soft);
+  margin-bottom:6px;
+  font-weight:600;
+}
+input[type=text],input[type=number]{
+  font-family:'Montserrat',sans-serif;
+  font-size:15px;
+  padding:11px 13px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--charcoal);
+  width:100%;
+}
+input:focus{outline:none;border-color:var(--gold);}
+button{
+  font-family:'Montserrat',sans-serif;
+  font-weight:600;
+  font-size:14px;
+  letter-spacing:0.02em;
+  padding:12px 22px;
+  border-radius:30px;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--charcoal);
+  cursor:pointer;
+  transition:all .15s ease;
+}
+button:hover{border-color:var(--gold);color:var(--gold);}
+button:active{transform:scale(0.97);}
+button.primary{background:var(--gold);border-color:var(--gold);color:#fff;}
+button.primary:hover{background:var(--gold-light);border-color:var(--gold-light);color:#fff;}
+button:disabled{opacity:.4;cursor:not-allowed;}
+.pill{
+  display:inline-block;
+  padding:3px 11px;
+  border-radius:20px;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.pill.wait{background:var(--cream);color:var(--charcoal-soft);}
+.pill.done{background:var(--sage);color:#fff;}
+.status-msg{
+  font-size:13px;
+  padding:10px 14px;
+  border-radius:10px;
+  margin-top:10px;
+}
+.status-msg.ok{background:#eef3ea;color:#5c6f52;}
+.status-msg.err{background:#f6e6e0;color:var(--red);}
+.speaker-row-input{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid var(--line);
+}
+.speaker-row-input:last-child{border-bottom:none;}
+.speaker-row-input .name{flex:1;font-weight:600;font-size:14px;}
+.speaker-row-input input{width:64px;text-align:center;}
+.speaker-row-input .colon{color:var(--charcoal-soft);}
+
+.confetti-layer{position:fixed;inset:0;z-index:200;pointer-events:none;overflow:hidden;}
+.confetti-piece{
+  position:absolute;top:-6%;opacity:.95;
+  animation-name:confettiFall;
+  animation-timing-function:cubic-bezier(.4,.1,.6,.9);
+  animation-iteration-count:1;
+}
+@keyframes confettiFall{
+  0%{transform:translateY(0) rotate(0deg);opacity:1;}
+  100%{transform:translateY(112vh) rotate(560deg);opacity:.85;}
+}
+
+table.lb{width:100%;border-collapse:collapse;font-size:13.5px;}
+table.lb th{
+  text-align:left;
+  font-size:10px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--charcoal-soft);
+  padding:0 8px 8px;
+  border-bottom:1px solid var(--line);
+}
+table.lb td{padding:8px;border-bottom:1px solid var(--line);}
+table.lb tr:last-child td{border-bottom:none;}
+table.lb td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.rank-medal{font-size:16px;margin-right:4px;}

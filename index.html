@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gjett taletiden!</title>
+<link rel="stylesheet" href="/assets/theme.css">
+<style>
+  .lead{
+    text-align:center;
+    font-size:14px;
+    color:var(--charcoal-soft);
+    margin-bottom:22px;
+    line-height:1.5;
+  }
+  .empty-note{
+    text-align:center;
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:18px;
+    color:var(--charcoal-soft);
+    padding:12px 0;
+  }
+  .speaker-result{
+    padding:14px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .speaker-result:last-child{border-bottom:none;}
+  .speaker-result .head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:8px;
+  }
+  .speaker-result .head .name{font-weight:700;font-size:16px;}
+  .speaker-result .head .actual{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:22px;
+    color:var(--gold);
+    font-variant-numeric:tabular-nums;
+  }
+  .winner-banner{
+    text-align:center;
+    background:linear-gradient(135deg,var(--gold),var(--gold-light));
+    color:#fff;
+    border-radius:18px;
+    padding:26px 20px;
+    margin-bottom:20px;
+    box-shadow:var(--shadow);
+  }
+  .winner-banner .trophy{font-size:44px;margin-bottom:6px;}
+  .winner-banner h2{color:#fff;font-size:26px;margin-bottom:4px;}
+  .winner-banner .sub{font-size:13px;opacity:0.9;}
+  .refresh-hint{
+    text-align:center;
+    font-size:11px;
+    color:var(--charcoal-soft);
+    margin-top:-6px;
+    margin-bottom:18px;
+  }
+</style>
+</head>
+<body>
+<div class="confetti-layer" id="confettiLayer"></div>
+<div class="container">
+  <div class="brand">
+    <div class="brand-names" id="brandNames">Karoline &amp; Peter</div>
+    <div class="brand-date" id="brandDate">&nbsp;</div>
+  </div>
+  <div class="lead">🎤 Gjett hvor lang tid hver taler bruker — og se hvem som traff nærmest når talen er ferdig!</div>
+
+  <div id="winnerZone"></div>
+
+  <div class="card" id="guessCard">
+    <h2>Gjett taletidene</h2>
+    <div class="sub">Skriv inn navnet ditt og gjett i minutter og sekunder. Du kan sende inn på nytt og oppdatere gjetningene dine helt frem til hver taler starter.</div>
+    <label for="guestName">Ditt navn</label>
+    <input type="text" id="guestName" placeholder="Navn og etternavn" maxlength="60">
+    <div id="speakerInputs" style="margin-top:14px;"></div>
+    <button class="primary" id="submitBtn" style="width:100%;margin-top:16px;">Send inn gjetningene mine</button>
+    <div id="submitStatus"></div>
+  </div>
+
+  <div class="card" id="resultsCard">
+    <h2>🏆 Resultater</h2>
+    <div class="sub">Oppdateres automatisk etter hvert som talerne blir ferdige.</div>
+    <div id="resultsBody"></div>
+  </div>
+
+  <div class="card" id="leaderboardCard" style="display:none;">
+    <h2>Sammenlagt</h2>
+    <div class="sub">Poeng for hver taler legges sammen — nærmest gjetning vinner mest.</div>
+    <div id="leaderboardBody"></div>
+  </div>
+
+  <div class="refresh-hint">Siden oppdaterer seg selv hvert 6. sekund</div>
+</div>
+
+<script src="/assets/app.js"></script>
+<script>
+(function(){
+  const A = window.WeddingApp;
+  const guestNameInput = document.getElementById('guestName');
+  const speakerInputs = document.getElementById('speakerInputs');
+  const submitBtn = document.getElementById('submitBtn');
+  const submitStatus = document.getElementById('submitStatus');
+  const guessCard = document.getElementById('guessCard');
+  const resultsBody = document.getElementById('resultsBody');
+  const leaderboardCard = document.getElementById('leaderboardCard');
+  const leaderboardBody = document.getElementById('leaderboardBody');
+  const winnerZone = document.getElementById('winnerZone');
+  const confettiLayer = document.getElementById('confettiLayer');
+  const brandNames = document.getElementById('brandNames');
+  const brandDate = document.getElementById('brandDate');
+
+  let state = { speakers: [] };
+  let guessesData = {};
+  let myEntries = JSON.parse(localStorage.getItem('wg_my_entries') || '{}');
+  let winnerCelebrated = false;
+
+  guestNameInput.value = localStorage.getItem('wg_guest_name') || '';
+
+  function minSecToSeconds(min, sec){
+    const m = parseInt(min, 10) || 0;
+    const s = Math.min(59, parseInt(sec, 10) || 0);
+    return m*60 + s;
+  }
+
+  function renderBrand(){
+    brandNames.textContent = state.coupleNames || 'Karoline & Peter';
+    brandDate.textContent = state.weddingDate || '';
+  }
+
+  function renderGuessForm(){
+    const unfinished = (state.speakers || []).filter(s => !s.finished);
+    speakerInputs.innerHTML = '';
+    if(!state.speakers || state.speakers.length === 0){
+      speakerInputs.innerHTML = '<div class="empty-note">Ingen talere er lagt inn ennå. Sjekk tilbake litt senere!</div>';
+      submitBtn.disabled = true;
+      return;
+    }
+    if(unfinished.length === 0){
+      speakerInputs.innerHTML = '<div class="empty-note">Alle talerne er ferdige — gjettingen er stengt. Se resultatene under!</div>';
+      submitBtn.disabled = true;
+      return;
+    }
+    submitBtn.disabled = false;
+    unfinished.forEach(sp => {
+      const row = document.createElement('div');
+      row.className = 'speaker-row-input';
+      const existing = myEntries[sp.id];
+      const min = existing != null ? Math.floor(existing/60) : '';
+      const sec = existing != null ? existing%60 : '';
+      row.innerHTML =
+        '<div class="name">'+escapeHtml(sp.name)+'</div>'+
+        '<input type="number" min="0" placeholder="min" data-speaker="'+sp.id+'" data-part="min" value="'+min+'">'+
+        '<span class="colon">:</span>'+
+        '<input type="number" min="0" max="59" placeholder="sek" data-speaker="'+sp.id+'" data-part="sec" value="'+sec+'">';
+      speakerInputs.appendChild(row);
+    });
+  }
+
+  function collectEntries(){
+    const entries = {};
+    speakerInputs.querySelectorAll('input[data-speaker]').forEach(() => {});
+    const bySpeaker = {};
+    speakerInputs.querySelectorAll('input[data-speaker]').forEach(inp => {
+      const id = inp.getAttribute('data-speaker');
+      bySpeaker[id] = bySpeaker[id] || {};
+      bySpeaker[id][inp.getAttribute('data-part')] = inp.value;
+    });
+    Object.keys(bySpeaker).forEach(id => {
+      const v = bySpeaker[id];
+      if(v.min !== '' || v.sec !== ''){
+        entries[id] = minSecToSeconds(v.min, v.sec);
+      }
+    });
+    return entries;
+  }
+
+  submitBtn.addEventListener('click', async () => {
+    const name = guestNameInput.value.trim();
+    if(!name){
+      submitStatus.innerHTML = '<div class="status-msg err">Skriv inn navnet ditt først.</div>';
+      guestNameInput.focus();
+      return;
+    }
+    const entries = collectEntries();
+    if(Object.keys(entries).length === 0){
+      submitStatus.innerHTML = '<div class="status-msg err">Fyll inn minst én gjetning.</div>';
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sender...';
+    try{
+      await A.apiPost('/api/guess', { name, entries });
+      localStorage.setItem('wg_guest_name', name);
+      myEntries = { ...myEntries, ...entries };
+      localStorage.setItem('wg_my_entries', JSON.stringify(myEntries));
+      submitStatus.innerHTML = '<div class="status-msg ok">Takk, '+escapeHtml(name)+'! Gjetningene dine er lagret. 🎉</div>';
+      await loadAll();
+    }catch(e){
+      submitStatus.innerHTML = '<div class="status-msg err">Kunne ikke lagre gjetningene. Prøv igjen om litt.</div>';
+    }
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Send inn gjetningene mine';
+  });
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str == null ? '' : str;
+    return d.innerHTML;
+  }
+
+  function guessListForSpeaker(speakerId){
+    const list = [];
+    Object.keys(guessesData).forEach(key => {
+      const rec = guessesData[key];
+      if(rec.entries && rec.entries[speakerId] != null){
+        list.push({ key, name: rec.name, guess: rec.entries[speakerId] });
+      }
+    });
+    return list;
+  }
+
+  function renderResults(){
+    const finished = (state.speakers || []).filter(s => s.finished).sort((a,b)=> (a.order||0) - (b.order||0));
+
+    if(finished.length === 0){
+      resultsBody.innerHTML = '<div class="empty-note">Ingen resultater ennå — kom tilbake når første taler er ferdig!</div>';
+      leaderboardCard.style.display = 'none';
+      winnerZone.innerHTML = '';
+      return;
+    }
+
+    let html = '';
+    const totals = {}; // key -> { name, points }
+
+    finished.forEach(sp => {
+      const guesses = guessListForSpeaker(sp.id).map(g => {
+        const diff = Math.abs(g.guess - sp.actualSeconds);
+        return { ...g, diff, pts: A.points(diff) };
+      }).sort((a,b) => a.diff - b.diff);
+
+      const minDiff = guesses.length ? guesses[0].diff : null;
+
+      html += '<div class="speaker-result">';
+      html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="actual">'+A.fmt(sp.actualSeconds)+'</span></div>';
+
+      if(guesses.length === 0){
+        html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen gjettet på denne taleren.</div>';
+      } else {
+        html += '<table class="lb"><thead><tr><th>Navn</th><th class="num">Gjetning</th><th class="num">Avvik</th><th class="num">Poeng</th></tr></thead><tbody>';
+        guesses.forEach(g => {
+          const bonus = (g.diff === minDiff) ? 10 : 0;
+          const totalPts = g.pts + bonus;
+          totals[g.key] = totals[g.key] || { name: g.name, points: 0 };
+          totals[g.key].points += totalPts;
+          const closestTag = bonus > 0 ? ' 🎯' : '';
+          html += '<tr><td>'+escapeHtml(g.name)+closestTag+'</td><td class="num">'+A.fmt(g.guess)+'</td><td class="num">'+A.fmt(g.diff)+'</td><td class="num">'+totalPts+'</td></tr>';
+        });
+        html += '</tbody></table>';
+      }
+      html += '</div>';
+    });
+
+    resultsBody.innerHTML = html;
+
+    // Leaderboard
+    const rows = Object.values(totals).sort((a,b) => b.points - a.points);
+    if(rows.length > 0){
+      leaderboardCard.style.display = '';
+      const medals = ['🥇','🥈','🥉'];
+      let lbHtml = '<table class="lb"><thead><tr><th>Plass</th><th>Navn</th><th class="num">Poeng</th></tr></thead><tbody>';
+      rows.forEach((r,i) => {
+        lbHtml += '<tr><td>'+(medals[i]||('#'+(i+1)))+'</td><td>'+escapeHtml(r.name)+'</td><td class="num">'+r.points+'</td></tr>';
+      });
+      lbHtml += '</tbody></table>';
+      leaderboardBody.innerHTML = lbHtml;
+    } else {
+      leaderboardCard.style.display = 'none';
+    }
+
+    // Winner banner if every speaker is finished
+    const allDone = state.speakers.length > 0 && state.speakers.every(s => s.finished);
+    if(allDone && rows.length > 0){
+      const winner = rows[0];
+      winnerZone.innerHTML =
+        '<div class="winner-banner"><div class="trophy">🏆</div>'+
+        '<h2>'+escapeHtml(winner.name)+' vant gjettekonkurransen!</h2>'+
+        '<div class="sub">med '+winner.points+' poeng sammenlagt</div></div>';
+      if(!winnerCelebrated){
+        winnerCelebrated = true;
+        A.launchConfetti(confettiLayer, 120);
+      }
+    } else {
+      winnerZone.innerHTML = '';
+    }
+  }
+
+  async function loadAll(){
+    try{
+      state = await A.apiGet('/api/state');
+    }catch(e){
+      resultsBody.innerHTML = '<div class="status-msg err">Fikk ikke kontakt med serveren. Prøver igjen automatisk.</div>';
+    }
+    try{
+      const g = await A.apiGet('/api/guess');
+      guessesData = g.guesses || {};
+    }catch(e){ /* ignore, keep last known */ }
+    renderBrand();
+    renderGuessForm();
+    renderResults();
+  }
+
+  loadAll();
+  setInterval(loadAll, 6000);
+  window.addEventListener('focus', loadAll);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR-kode — Gjett taletiden</title>
+<link rel="stylesheet" href="/assets/theme.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  body{ background:var(--ivory); }
+  .toolbar{
+    max-width:900px;
+    margin:0 auto;
+    padding:20px 20px 0;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+  }
+  .toolbar .url{
+    font-size:12px;
+    color:var(--charcoal-soft);
+    word-break:break-all;
+  }
+  .sheet{
+    max-width:900px;
+    margin:20px auto 60px;
+    padding:0 20px;
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:18px;
+  }
+  .qr-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:26px 20px;
+    text-align:center;
+    box-shadow:var(--shadow);
+  }
+  .qr-card .brand-names{ font-size:22px; }
+  .qr-card .qr-box{
+    display:flex;
+    justify-content:center;
+    margin:16px 0;
+  }
+  .qr-card .caption{
+    font-size:14px;
+    font-weight:600;
+    color:var(--charcoal);
+    margin-top:6px;
+  }
+  .qr-card .instructions{
+    font-size:11px;
+    color:var(--charcoal-soft);
+    margin-top:4px;
+    letter-spacing:0.03em;
+  }
+  @media print{
+    .toolbar{ display:none; }
+    .sheet{ margin:0; padding:0; gap:10px; }
+    .qr-card{ box-shadow:none; border:1px dashed var(--line); break-inside:avoid; }
+    body{ background:#fff; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="url">Lenke som deles: <span id="urlLabel">—</span></div>
+    <button class="primary" onclick="window.print()">🖨️ Skriv ut</button>
+  </div>
+  <div class="sheet" id="sheet"></div>
+
+<script src="/assets/app.js"></script>
+<script>
+(function(){
+  const A = window.WeddingApp;
+  const sheet = document.getElementById('sheet');
+  const urlLabel = document.getElementById('urlLabel');
+  const guessUrl = window.location.origin + '/';
+  urlLabel.textContent = guessUrl;
+
+  const CARD_COUNT = 6;
+
+  async function build(){
+    let coupleNames = 'Karoline & Peter';
+    let weddingDate = '';
+    try{
+      const state = await A.apiGet('/api/state');
+      coupleNames = state.coupleNames || coupleNames;
+      weddingDate = state.weddingDate || '';
+    }catch(e){ /* fall back to defaults */ }
+
+    for(let i=0;i<CARD_COUNT;i++){
+      const card = document.createElement('div');
+      card.className = 'qr-card';
+      card.innerHTML =
+        '<div class="brand-names">'+coupleNames+'</div>'+
+        '<div class="brand-date">'+weddingDate+'</div>'+
+        '<div class="qr-box" id="qr-'+i+'"></div>'+
+        '<div class="caption">📱 Skann for å gjette på taletidene!</div>'+
+        '<div class="instructions">Skriv inn navnet ditt og gjett hvor lang tid hver taler bruker</div>';
+      sheet.appendChild(card);
+      new QRCode(document.getElementById('qr-'+i), {
+        text: guessUrl,
+        width: 190,
+        height: 190,
+        colorDark: '#3a332c',
+        colorLight: '#faf5ee',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+  }
+
+  build();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taletid — Toastmaster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ivory:#faf5ee;
+    --cream:#f2e9dc;
+    --charcoal:#3a332c;
+    --charcoal-soft:#6b6055;
+    --gold:#b8935a;
+    --gold-light:#d9bd8c;
+    --rose:#c98e86;
+    --sage:#8a9a7e;
+    --amber:#c99a4b;
+    --red:#b5533c;
+    --red-light:#d97a5f;
+    --line:#e4d8c4;
+    --shadow: 0 10px 40px rgba(58,51,44,0.08);
+    --pulse-speed: 2.4s;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:var(--ivory);
+    color:var(--charcoal);
+    font-family:'Montserrat',sans-serif;
+    overflow:hidden;
+  }
+  #vignette{
+    position:fixed;inset:0;
+    pointer-events:none;
+    z-index:5;
+    opacity:0;
+    background: radial-gradient(ellipse at center, rgba(181,83,60,0) 55%, rgba(181,83,60,0.35) 100%);
+    transition: opacity 0.6s ease;
+  }
+  body.state-warning #vignette{ opacity:0.35; background: radial-gradient(ellipse at center, rgba(201,154,75,0) 55%, rgba(201,154,75,0.28) 100%); }
+  body.state-over #vignette{ opacity:0.6; animation: vignettePulse var(--pulse-speed) ease-in-out infinite; }
+  @keyframes vignettePulse{
+    0%,100%{ opacity:0.45; }
+    50%{ opacity:0.75; }
+  }
+
+  #app{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    padding:2.2vh 4vw;
+    position:relative;
+    z-index:2;
+  }
+  .brand{
+    text-align:center;
+    color:var(--charcoal-soft);
+    letter-spacing:0.08em;
+  }
+  .brand-names{
+    font-family:'Cormorant Garamond',serif;
+    font-size:clamp(18px,2.1vw,28px);
+    font-style:italic;
+    color:var(--gold);
+    letter-spacing:0.12em;
+  }
+  .brand-date{
+    font-size:clamp(9px,0.8vw,12px);
+    text-transform:uppercase;
+    letter-spacing:0.25em;
+    margin-top:2px;
+  }
+  .sync-status{
+    font-size:10px;
+    color:var(--charcoal-soft);
+    margin-top:4px;
+    letter-spacing:0.05em;
+  }
+  .stage{
+    flex:1;
+    width:100%;
+    max-width:1100px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    gap:0.6vh;
+    position:relative;
+    min-height:0;
+  }
+
+  .speaker-label{
+    font-size:clamp(10px,0.9vw,13px);
+    letter-spacing:0.35em;
+    text-transform:uppercase;
+    color:var(--rose);
+    font-weight:600;
+    position:relative;
+    z-index:2;
+  }
+  .speaker-name{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:600;
+    font-size:clamp(32px,5.2vw,68px);
+    margin:0;
+    line-height:1.05;
+    color:var(--charcoal);
+    position:relative;
+    z-index:2;
+  }
+  .target-row{
+    display:flex;
+    align-items:baseline;
+    justify-content:center;
+    gap:0.6ch;
+    margin:0.3vh 0 0.4vh;
+    position:relative;
+    z-index:2;
+  }
+  .target-tag{
+    font-size:clamp(11px,1vw,14px);
+    letter-spacing:0.15em;
+    text-transform:uppercase;
+    color:var(--charcoal-soft);
+    font-weight:600;
+  }
+  .target-value{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:clamp(30px,4vw,50px);
+    color:var(--gold);
+    font-variant-numeric:tabular-nums;
+    line-height:1;
+  }
+  .timer-ring-wrap{
+    position:relative;
+    width:min(42vh,42vw,480px);
+    height:min(42vh,42vw,480px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:0.6vh 0;
+    z-index:2;
+  }
+  .timer-ring-wrap.glitch-shake{
+    animation: shakeJitter 0.28s infinite;
+  }
+  @keyframes shakeJitter{
+    0%{transform:translate(0,0) rotate(0deg);}
+    20%{transform:translate(-4px,3px) rotate(-0.6deg);}
+    40%{transform:translate(3px,-2px) rotate(0.5deg);}
+    60%{transform:translate(-3px,-3px) rotate(-0.4deg);}
+    80%{transform:translate(2px,3px) rotate(0.6deg);}
+    100%{transform:translate(0,0) rotate(0deg);}
+  }
+  .timer-ring-wrap svg{
+    position:absolute;
+    top:0;left:0;width:100%;height:100%;
+    transform:rotate(-90deg);
+  }
+  .ring-bg{
+    fill:none;
+    stroke:var(--cream);
+    stroke-width:5;
+  }
+  .ring-fg{
+    fill:none;
+    stroke:var(--sage);
+    stroke-width:5.5;
+    stroke-linecap:round;
+    transition:stroke-dashoffset 0.25s linear, stroke 0.4s ease;
+  }
+  .ring-fg.warning{
+    stroke:var(--amber);
+    animation: ringPulse var(--pulse-speed) ease-in-out infinite;
+  }
+  .ring-fg.over{
+    stroke:var(--red);
+    animation: ringPulse calc(var(--pulse-speed) * 0.6) ease-in-out infinite;
+  }
+  .ring-fg.ring-glitch{
+    animation: glitchFlicker 0.45s steps(1) infinite !important;
+    transition:none;
+  }
+  @keyframes ringPulse{
+    0%,100%{ stroke-width:5.5; opacity:1; }
+    50%{ stroke-width:9; opacity:0.7; }
+  }
+  @keyframes glitchFlicker{
+    0%{stroke:var(--red); stroke-width:5.5;}
+    20%{stroke:var(--sage); stroke-width:9;}
+    40%{stroke:var(--red); stroke-width:4;}
+    55%{stroke:var(--charcoal); stroke-width:8;}
+    70%{stroke:var(--red); stroke-width:5.5;}
+    85%{stroke:var(--amber); stroke-width:10;}
+    100%{stroke:var(--red); stroke-width:5.5;}
+  }
+  .timer{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:clamp(56px,8vw,112px);
+    color:var(--charcoal);
+    font-variant-numeric:tabular-nums;
+    transition:color 0.4s ease;
+    position:relative;
+    z-index:2;
+  }
+  .timer.warning{color:var(--amber);}
+  .timer.over{color:var(--red);}
+  .timer.pulse{animation:pulse 0.9s ease-in-out infinite;}
+  .timer.glitch-text{
+    color:var(--red);
+    text-shadow: 2px 0 var(--sage), -2px 0 var(--rose);
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:0.5;}
+  }
+  .delta{
+    font-size:clamp(13px,1.15vw,17px);
+    letter-spacing:0.05em;
+    color:var(--charcoal-soft);
+    min-height:20px;
+    font-weight:600;
+    position:relative;
+    z-index:2;
+  }
+  .delta.over{color:var(--red);}
+
+  .glitch-caption{
+    font-family:'Montserrat',sans-serif;
+    font-size:clamp(11px,1vw,14px);
+    letter-spacing:0.12em;
+    font-weight:700;
+    color:var(--red);
+    text-transform:uppercase;
+    opacity:0;
+    transform:skewX(0deg);
+    min-height:16px;
+    position:relative;
+    z-index:2;
+  }
+  .glitch-caption.show{
+    opacity:1;
+    animation: captionGlitch 0.35s steps(1) infinite;
+  }
+  @keyframes captionGlitch{
+    0%{ transform:skewX(0deg) translateX(0); opacity:1;}
+    25%{ transform:skewX(-4deg) translateX(2px); opacity:0.7;}
+    50%{ transform:skewX(3deg) translateX(-2px); opacity:1;}
+    75%{ transform:skewX(0deg) translateX(1px); opacity:0.6;}
+    100%{ transform:skewX(0deg) translateX(0); opacity:1;}
+  }
+
+  .fx-layer{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:1;
+  }
+  .orbit-turtle{
+    position:absolute;
+    top:50%;left:50%;
+    width:0;height:0;
+    animation: orbitSpin 9s linear infinite;
+  }
+  .orbit-turtle .emoji{
+    position:absolute;
+    left:0;
+    top:calc(-1 * var(--orbit-r, 200px));
+    transform: translate(-50%,-50%);
+    font-size:clamp(24px,3vw,36px);
+    animation: counterSpin 9s linear infinite;
+    filter:drop-shadow(0 2px 3px rgba(58,51,44,0.3));
+  }
+  @keyframes orbitSpin{ from{ transform: translate(-50%,-50%) rotate(0deg);} to{ transform: translate(-50%,-50%) rotate(360deg);} }
+  @keyframes counterSpin{ from{ transform: translate(-50%,-50%) rotate(0deg);} to{ transform: translate(-50%,-50%) rotate(-360deg);} }
+  .yawn-badge{
+    position:absolute;
+    top:2%;
+    right:6%;
+    font-size:clamp(26px,3.4vw,40px);
+    animation: yawnBounce 1.5s ease-in-out infinite;
+  }
+  @keyframes yawnBounce{
+    0%,100%{ transform: translateY(0) rotate(-8deg); }
+    50%{ transform: translateY(-12px) rotate(10deg); }
+  }
+
+  .status-bar-wrap{
+    width:100%;
+    max-width:760px;
+    margin-top:1.2vh;
+    position:relative;
+    z-index:2;
+  }
+  .status-bar-track{
+    position:relative;
+    width:100%;
+    height:clamp(16px,2vh,26px);
+    background:var(--cream);
+    border-radius:20px;
+    overflow:hidden;
+    box-shadow: inset 0 1px 3px rgba(58,51,44,0.12);
+  }
+  .status-bar-fill{
+    position:absolute;
+    left:0;top:0;bottom:0;
+    width:0%;
+    border-radius:20px;
+    background:var(--sage);
+    transition: width 0.25s linear, background 0.4s ease;
+  }
+  .status-bar-fill.warning{
+    background:var(--amber);
+    animation: barPulse var(--pulse-speed) ease-in-out infinite;
+  }
+  .status-bar-fill.over{
+    background-image: repeating-linear-gradient(45deg, var(--red) 0 16px, var(--red-light) 16px 32px);
+    background-size: 200% 100%;
+    animation: stripeMove 0.9s linear infinite;
+  }
+  @keyframes barPulse{
+    0%,100%{ filter:brightness(1); }
+    50%{ filter:brightness(1.18); }
+  }
+  @keyframes stripeMove{
+    from{ background-position:0 0; }
+    to{ background-position:-45px 0; }
+  }
+  .status-bar-marker{
+    position:absolute;
+    top:-6px;
+    bottom:-6px;
+    width:2px;
+    background:var(--charcoal);
+    opacity:0.55;
+  }
+  .status-bar-marker.orange{ background:var(--amber); opacity:0.8; }
+  .status-bar-marker .tag{
+    position:absolute;
+    top:-19px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:11px;
+    font-weight:700;
+    color:var(--charcoal-soft);
+  }
+  .status-bar-marker .flag{
+    position:absolute;
+    top:-22px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:14px;
+  }
+  .bar-labels{
+    display:flex;
+    justify-content:space-between;
+    font-size:10px;
+    letter-spacing:0.15em;
+    text-transform:uppercase;
+    color:var(--charcoal-soft);
+    margin-top:4px;
+  }
+
+  #flashOverlay{
+    position:fixed;inset:0;
+    z-index:6;
+    pointer-events:none;
+    background:radial-gradient(circle, rgba(181,83,60,0.55) 0%, rgba(181,83,60,0) 70%);
+    opacity:0;
+  }
+  #flashOverlay.fire{
+    animation: flashPulse 1.1s ease-out;
+  }
+  @keyframes flashPulse{
+    0%{ opacity:0.9; }
+    100%{ opacity:0; }
+  }
+  #overtimeBanner{
+    position:fixed;
+    top:14vh;
+    left:50%;
+    transform:translate(-50%,-14px);
+    background:var(--charcoal);
+    color:var(--ivory);
+    padding:14px 28px;
+    border-radius:40px;
+    font-size:clamp(14px,1.4vw,20px);
+    letter-spacing:0.06em;
+    font-weight:600;
+    box-shadow:var(--shadow);
+    z-index:7;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  #overtimeBanner.show{
+    opacity:1;
+    transform:translate(-50%,0);
+  }
+
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:6px;
+    padding-top:1vh;
+    border-top:1px solid var(--line);
+    width:100%;
+    max-width:760px;
+    position:relative;
+    z-index:2;
+    transition:opacity 0.3s ease;
+  }
+  button{
+    font-family:'Montserrat',sans-serif;
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:0.02em;
+    padding:7px 13px;
+    border-radius:22px;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--charcoal);
+    cursor:pointer;
+    transition:all 0.15s ease;
+  }
+  button:hover{border-color:var(--gold);color:var(--gold);}
+  button:active{transform:scale(0.96);}
+  button.primary{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#fff;
+    min-width:76px;
+  }
+  button.primary:hover{background:var(--gold-light);border-color:var(--gold-light);color:#fff;}
+  button.primary.stop{background:var(--red);border-color:var(--red);}
+  button.primary.stop:hover{background:#c96a52;border-color:#c96a52;}
+  button.primary.finish{background:var(--sage);border-color:var(--sage);}
+  button.primary.finish:hover{background:#9db092;border-color:#9db092;}
+  button:disabled{opacity:0.35;cursor:not-allowed;}
+  button:disabled:hover{border-color:var(--line);color:var(--charcoal);}
+
+  .hint{
+    font-size:10px;
+    color:var(--charcoal-soft);
+    text-align:center;
+    padding-top:5px;
+    letter-spacing:0.03em;
+    position:relative;
+    z-index:2;
+    transition:opacity 0.3s ease;
+  }
+
+  body.fs-active .controls,
+  body.fs-active .hint{
+    display:none;
+  }
+
+  .modal{
+    position:fixed;inset:0;
+    background:rgba(58,51,44,0.55);
+    display:flex;align-items:center;justify-content:center;
+    z-index:50;
+  }
+  .modal.hidden{display:none;}
+  .modal-content{
+    background:var(--ivory);
+    border-radius:16px;
+    padding:32px;
+    width:min(600px,90vw);
+    max-height:85vh;
+    overflow-y:auto;
+    box-shadow:var(--shadow);
+  }
+  .modal-content h2{
+    font-family:'Cormorant Garamond',serif;
+    font-size:30px;
+    margin:0 0 4px;
+    color:var(--charcoal);
+  }
+  .modal-sub{
+    font-size:13px;
+    color:var(--charcoal-soft);
+    margin-bottom:12px;
+    line-height:1.5;
+  }
+  .rule-note{
+    font-size:12px;
+    background:var(--cream);
+    border-radius:10px;
+    padding:10px 14px;
+    color:var(--charcoal-soft);
+    margin-bottom:18px;
+    line-height:1.5;
+  }
+  .speaker-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .speaker-row.active{background:var(--cream);border-radius:8px;padding:8px;}
+  .speaker-row.done{opacity:0.6;}
+  .speaker-row input[type=text]{
+    flex:1;
+    min-width:0;
+  }
+  .speaker-row input[type=number]{
+    width:56px;
+  }
+  input{
+    font-family:'Montserrat',sans-serif;
+    font-size:14px;
+    padding:9px 10px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--charcoal);
+  }
+  input:focus{outline:none;border-color:var(--gold);}
+  .row-btn{
+    background:none;border:none;color:var(--charcoal-soft);
+    font-size:16px;padding:4px 7px;border-radius:6px;
+  }
+  .row-btn:hover{background:var(--cream);color:var(--charcoal);}
+  .row-btn.danger:hover{color:var(--red);}
+  .add-row{
+    display:flex;gap:8px;margin-top:16px;align-items:center;
+  }
+  .add-row input[type=text]{flex:1;}
+  .add-row input[type=number]{width:56px;}
+  .modal-actions{
+    margin-top:24px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .modal-actions .left-actions{display:flex;gap:8px;}
+  .settings-fields{
+    display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;
+  }
+  .settings-fields input{flex:1;min-width:140px;}
+  .empty-state{
+    font-family:'Cormorant Garamond',serif;
+    font-size:24px;
+    color:var(--charcoal-soft);
+    font-style:italic;
+  }
+  .field-hint{
+    font-size:10px;
+    color:var(--charcoal-soft);
+    text-align:right;
+    margin-top:-10px;
+    margin-bottom:12px;
+  }
+  .sync-line{
+    font-size:11px;
+    color:var(--charcoal-soft);
+    margin:-6px 0 16px;
+  }
+
+  /* Results dashboard (privat kupp-gjetning fra brudeparet) */
+  .result-overlay{
+    position:fixed;inset:0;
+    z-index:60;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(58,51,44,0.6);
+  }
+  .result-overlay.hidden{display:none;}
+  .result-card{
+    position:relative;
+    z-index:2;
+    background:var(--ivory);
+    border-radius:22px;
+    padding:36px 44px;
+    width:min(620px,92vw);
+    max-height:90vh;
+    overflow-y:auto;
+    text-align:center;
+    box-shadow:var(--shadow);
+  }
+  .result-emoji{
+    font-size:56px;
+    line-height:1;
+    margin-bottom:6px;
+  }
+  .result-title{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:34px;
+    color:var(--charcoal);
+    margin-bottom:2px;
+  }
+  .result-name{
+    font-size:13px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--charcoal-soft);
+    margin-bottom:22px;
+  }
+  .result-stats{
+    display:flex;
+    justify-content:center;
+    gap:36px;
+    margin-bottom:20px;
+  }
+  .stat-block .stat-label{
+    font-size:11px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--charcoal-soft);
+    margin-bottom:4px;
+  }
+  .stat-block .stat-value{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:40px;
+    color:var(--gold);
+    font-variant-numeric:tabular-nums;
+  }
+  .result-gauge-wrap{
+    margin:8px auto 18px;
+    max-width:480px;
+  }
+  .result-gauge-track{
+    position:relative;
+    height:14px;
+    background:var(--cream);
+    border-radius:10px;
+    overflow:visible;
+  }
+  .result-gauge-fill{
+    position:absolute;
+    left:0;top:0;bottom:0;
+    width:0%;
+    background:var(--sage);
+    border-radius:10px;
+  }
+  .result-gauge-marker{
+    position:absolute;
+    top:50%;
+    transform:translate(-50%,-50%);
+    font-size:18px;
+  }
+  .result-gauge-marker.guess{ top:-14px; font-size:16px; }
+  .result-verdict{
+    font-size:15px;
+    color:var(--charcoal-soft);
+    font-weight:600;
+    margin-bottom:12px;
+    line-height:1.5;
+  }
+  .result-publish-note{
+    font-size:11px;
+    color:var(--sage);
+    font-weight:600;
+    margin-bottom:24px;
+  }
+  .result-actions{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+  }
+  .result-actions button{
+    font-size:13px;
+    padding:10px 22px;
+  }
+
+  #confettiLayer{
+    position:fixed;inset:0;
+    z-index:61;
+    pointer-events:none;
+    overflow:hidden;
+  }
+  .confetti-piece{
+    position:absolute;
+    top:-6%;
+    opacity:0.95;
+    animation-name: confettiFall;
+    animation-timing-function: cubic-bezier(.4,.1,.6,.9);
+    animation-iteration-count:1;
+  }
+  @keyframes confettiFall{
+    0%{ transform:translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(112vh) rotate(560deg); opacity:0.85; }
+  }
+</style>
+</head>
+<body>
+<div id="vignette"></div>
+<div id="flashOverlay"></div>
+<div id="overtimeBanner">⏰ 7 minutter er nådd!</div>
+
+<div id="app">
+  <header class="brand">
+    <div class="brand-names" id="coupleNamesDisplay">Karoline &amp; Peter</div>
+    <div class="brand-date" id="weddingDateDisplay">4.–5. september 2026</div>
+    <div class="sync-status" id="syncStatus">⏳ Kobler til Netlify...</div>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="speaker-label">TALER</div>
+    <h1 class="speaker-name" id="speakerName">Legg til talere for å starte</h1>
+
+    <div class="target-row">
+      <span class="target-tag">🎯 Grense:</span>
+      <span class="target-value" id="targetValue">5:00–7:00</span>
+    </div>
+
+    <div class="timer-ring-wrap" id="ringWrap">
+      <svg viewBox="0 0 120 120">
+        <circle class="ring-bg" cx="60" cy="60" r="54"/>
+        <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="54"/>
+      </svg>
+      <div class="timer" id="timerDisplay">00:00</div>
+      <div class="fx-layer" id="fxLayer"></div>
+    </div>
+    <div class="delta" id="deltaLabel">&nbsp;</div>
+    <div class="glitch-caption" id="glitchCaption">⚠️ TIDTAKINGEN FEILER...</div>
+
+    <div class="status-bar-wrap">
+      <div class="status-bar-track">
+        <div class="status-bar-fill" id="statusBarFill"></div>
+        <div class="status-bar-marker orange" id="marker5"><span class="tag">5</span></div>
+        <div class="status-bar-marker" id="marker7"><span class="flag">🏁</span></div>
+      </div>
+      <div class="bar-labels"><span>0:00</span><span id="barMaxLabel">—</span></div>
+    </div>
+  </main>
+
+  <footer class="controls">
+    <button id="prevBtn">‹</button>
+    <button id="startBtn" class="primary">Start</button>
+    <button id="finishBtn" class="primary finish">Ferdig ✓</button>
+    <button id="resetBtn">↺</button>
+    <button id="nextBtn">›</button>
+    <button id="fullscreenBtn">⛶</button>
+    <button id="editBtn">✎ Talere</button>
+  </footer>
+  <div class="hint">Mellomrom = start/pause · Enter = ferdig · R = nullstill · ← → = forrige/neste taler · F = fullskjerm</div>
+</div>
+
+<div id="editModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Talere &amp; innstillinger</h2>
+    <div class="modal-sub">Alle talere er bedt om å holde seg innenfor 5–7 minutter. Dette gjelder likt for alle, og styrer fargene på skjermen.</div>
+    <div class="rule-note">💛 Min/sek-feltene under er <strong>brudeparets private gjetning</strong> — vises kun her, aldri på gjestenes side. Når du trykker «Ferdig ✓» på en taler, publiseres kun det <strong>faktiske resultatet</strong> til gjestenes gjettekonkurranse-side.</div>
+
+    <div class="settings-fields">
+      <input type="text" id="coupleNamesInput" placeholder="Brudeparets navn">
+      <input type="text" id="weddingDateInput" placeholder="Dato / sted">
+    </div>
+    <div class="settings-fields">
+      <input type="text" id="adminKeyInput" placeholder="Admin-nøkkel (fra Netlify)">
+    </div>
+    <div class="sync-line">Admin-nøkkelen må matche miljøvariabelen <code>ADMIN_KEY</code> i Netlify-siden din (standard: <code>bryllup2026</code>).</div>
+
+    <div id="speakerListEditor"></div>
+
+    <div class="add-row">
+      <input type="text" id="newName" placeholder="Navn på taler">
+      <input type="number" id="newMin" min="0" placeholder="min">
+      <input type="number" id="newSec" min="0" max="59" placeholder="sek">
+      <button id="addSpeakerBtn" class="primary">Legg til</button>
+    </div>
+    <div class="field-hint">min / sek = brudeparets private gjetning for denne taleren</div>
+
+    <div class="modal-actions">
+      <div class="left-actions">
+        <button id="pullBtn">🔄 Hent fra server</button>
+      </div>
+      <button id="closeModalBtn" class="primary">Lagre &amp; lukk</button>
+    </div>
+  </div>
+</div>
+
+<div id="resultOverlay" class="result-overlay hidden">
+  <div class="result-card">
+    <div class="result-emoji" id="resultEmoji">🎉</div>
+    <div class="result-title" id="resultTitle">Innenfor tiden!</div>
+    <div class="result-name" id="resultSpeakerName">—</div>
+    <div class="result-stats">
+      <div class="stat-block">
+        <div class="stat-label">Faktisk taletid</div>
+        <div class="stat-value" id="resultActual">00:00</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Brudeparets gjetning</div>
+        <div class="stat-value" id="resultGuess">—</div>
+      </div>
+    </div>
+    <div class="result-gauge-wrap" id="resultGaugeWrap">
+      <div class="result-gauge-track">
+        <div class="result-gauge-fill" id="resultGaugeFill"></div>
+        <div class="result-gauge-marker guess" id="gaugeGuessMarker">🎯</div>
+        <div class="result-gauge-marker actual" id="gaugeActualMarker">📍</div>
+      </div>
+    </div>
+    <div class="result-verdict" id="resultVerdict"></div>
+    <div class="result-publish-note" id="resultPublishNote">Publiserer resultatet til gjestenes side...</div>
+    <div class="result-actions">
+      <button id="resultCloseBtn">Lukk</button>
+      <button id="resultNextBtn" class="primary">Neste taler ›</button>
+    </div>
+  </div>
+</div>
+<div id="confettiLayer"></div>
+
+<script>
+(function(){
+  const LS_SPEAKERS = 'toastmaster_speakers_v3';
+  const LS_COUPLE = 'toastmaster_couple_v1';
+  const LS_DATE = 'toastmaster_date_v1';
+  const LS_ADMIN_KEY = 'toastmaster_admin_key';
+
+  const ORANGE_AT = 5*60;   // 5 min – felles regel for alle talere
+  const RED_AT = 7*60;      // 7 min – felles regel for alle talere
+  const STAGE1_MAX = 10;    // sek over RED_AT
+  const STAGE2_MAX = 30;    // sek over RED_AT
+
+  function genId(){
+    if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'sp-' + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+  }
+
+  let speakers = JSON.parse(localStorage.getItem(LS_SPEAKERS) || 'null') || [
+    {name:'Far til bruden', min:3, sec:0},
+    {name:'Forlover (brud)', min:4, sec:0},
+    {name:'Forlover (brudgom)', min:4, sec:0}
+  ];
+  // Migrering: sørg for at alle talere har id / finished / actualSeconds
+  speakers.forEach(sp => {
+    if(!sp.id) sp.id = genId();
+    if(sp.finished === undefined) sp.finished = false;
+    if(sp.actualSeconds === undefined) sp.actualSeconds = null;
+  });
+
+  let currentIndex = 0;
+  let running = false;
+  let elapsedMs = 0;
+  let startTs = 0;
+  let tickHandle = null;
+
+  let crossedRed = false;
+  let overtimeStage = 0; // 0 none, 1 turtle, 2 turtle+yawn, 3 glitch
+  let bannerHideTimer = null;
+
+  const speakerNameEl = document.getElementById('speakerName');
+  const targetValue = document.getElementById('targetValue');
+  const timerDisplay = document.getElementById('timerDisplay');
+  const deltaLabel = document.getElementById('deltaLabel');
+  const glitchCaption = document.getElementById('glitchCaption');
+  const ringWrap = document.getElementById('ringWrap');
+  const ringFg = document.getElementById('ringFg');
+  const fxLayer = document.getElementById('fxLayer');
+  const statusBarFill = document.getElementById('statusBarFill');
+  const marker5 = document.getElementById('marker5');
+  const marker7 = document.getElementById('marker7');
+  const barMaxLabel = document.getElementById('barMaxLabel');
+  const flashOverlay = document.getElementById('flashOverlay');
+  const overtimeBanner = document.getElementById('overtimeBanner');
+  const syncStatus = document.getElementById('syncStatus');
+  const startBtn = document.getElementById('startBtn');
+  const finishBtn = document.getElementById('finishBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+  const editBtn = document.getElementById('editBtn');
+  const editModal = document.getElementById('editModal');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  const pullBtn = document.getElementById('pullBtn');
+  const speakerListEditor = document.getElementById('speakerListEditor');
+  const addSpeakerBtn = document.getElementById('addSpeakerBtn');
+  const newName = document.getElementById('newName');
+  const newMin = document.getElementById('newMin');
+  const newSec = document.getElementById('newSec');
+  const coupleNamesInput = document.getElementById('coupleNamesInput');
+  const weddingDateInput = document.getElementById('weddingDateInput');
+  const adminKeyInput = document.getElementById('adminKeyInput');
+  const coupleNamesDisplay = document.getElementById('coupleNamesDisplay');
+  const weddingDateDisplay = document.getElementById('weddingDateDisplay');
+
+  const resultOverlay = document.getElementById('resultOverlay');
+  const resultEmoji = document.getElementById('resultEmoji');
+  const resultTitle = document.getElementById('resultTitle');
+  const resultSpeakerName = document.getElementById('resultSpeakerName');
+  const resultActual = document.getElementById('resultActual');
+  const resultGuess = document.getElementById('resultGuess');
+  const resultGaugeWrap = document.getElementById('resultGaugeWrap');
+  const resultGaugeFill = document.getElementById('resultGaugeFill');
+  const gaugeGuessMarker = document.getElementById('gaugeGuessMarker');
+  const gaugeActualMarker = document.getElementById('gaugeActualMarker');
+  const resultVerdict = document.getElementById('resultVerdict');
+  const resultPublishNote = document.getElementById('resultPublishNote');
+  const resultCloseBtn = document.getElementById('resultCloseBtn');
+  const resultNextBtn = document.getElementById('resultNextBtn');
+  const confettiLayer = document.getElementById('confettiLayer');
+
+  const RADIUS = 54;
+  const CIRC = 2 * Math.PI * RADIUS;
+  ringFg.style.strokeDasharray = CIRC;
+  targetValue.textContent = fmt(ORANGE_AT) + '–' + fmt(RED_AT);
+
+  function plannedSeconds(sp){ return (sp.min||0)*60 + (sp.sec||0); }
+  function fmt(totalSec){
+    const s = Math.max(0, Math.round(totalSec));
+    const m = Math.floor(s/60);
+    const r = s%60;
+    return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0');
+  }
+
+  function saveSpeakers(){ localStorage.setItem(LS_SPEAKERS, JSON.stringify(speakers)); }
+  function saveBrand(){
+    localStorage.setItem(LS_COUPLE, coupleNamesInput.value);
+    localStorage.setItem(LS_DATE, weddingDateInput.value);
+    localStorage.setItem(LS_ADMIN_KEY, adminKeyInput.value);
+  }
+
+  function loadBrand(){
+    const c = localStorage.getItem(LS_COUPLE);
+    const d = localStorage.getItem(LS_DATE);
+    const k = localStorage.getItem(LS_ADMIN_KEY);
+    if(c){ coupleNamesDisplay.textContent = c; coupleNamesInput.value = c; }
+    else { coupleNamesInput.value = coupleNamesDisplay.textContent; }
+    if(d){ weddingDateDisplay.textContent = d; weddingDateInput.value = d; }
+    else { weddingDateInput.value = weddingDateDisplay.textContent; }
+    if(k){ adminKeyInput.value = k; }
+  }
+
+  // ---------- Backend-sync (Netlify Functions + Blobs) ----------
+  async function apiGet(path){
+    const res = await fetch(path, { headers: { accept: 'application/json' } });
+    if(!res.ok) throw new Error('GET ' + path + ' failed: ' + res.status);
+    return res.json();
+  }
+  async function apiPost(path, body){
+    const headers = { 'content-type': 'application/json' };
+    const key = adminKeyInput.value || localStorage.getItem(LS_ADMIN_KEY) || '';
+    if(key) headers['x-admin-key'] = key;
+    const res = await fetch(path, { method:'POST', headers, body: JSON.stringify(body) });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ const err = new Error(data.error || ('POST failed: '+res.status)); err.status = res.status; throw err; }
+    return data;
+  }
+
+  function setSyncStatus(text){ syncStatus.textContent = text; }
+
+  async function syncFromServer(){
+    try{
+      const server = await apiGet('/api/state');
+      if(server.coupleNames){
+        coupleNamesDisplay.textContent = server.coupleNames;
+        coupleNamesInput.value = server.coupleNames;
+      }
+      if(server.weddingDate){
+        weddingDateDisplay.textContent = server.weddingDate;
+        weddingDateInput.value = server.weddingDate;
+      }
+      if(Array.isArray(server.speakers) && server.speakers.length > 0){
+        const byId = {};
+        speakers.forEach(sp => { byId[sp.id] = sp; });
+        const merged = server.speakers
+          .slice()
+          .sort((a,b)=>(a.order||0)-(b.order||0))
+          .map(srv => {
+            const local = byId[srv.id];
+            return {
+              id: srv.id,
+              name: srv.name,
+              min: local ? local.min : 0,
+              sec: local ? local.sec : 0,
+              finished: !!srv.finished,
+              actualSeconds: srv.actualSeconds != null ? srv.actualSeconds : null
+            };
+          });
+        // Behold lokale talere som ennå ikke er lagret på serveren
+        speakers.forEach(sp => {
+          if(!server.speakers.find(s => s.id === sp.id)) merged.push(sp);
+        });
+        speakers = merged;
+        saveSpeakers();
+      }
+      setSyncStatus('🟢 Synkronisert med Netlify');
+      return true;
+    }catch(e){
+      setSyncStatus('🟡 Lokal modus (ingen tilkobling til Netlify)');
+      return false;
+    }
+  }
+
+  async function pushStateToServer(){
+    const payload = {
+      coupleNames: coupleNamesDisplay.textContent,
+      weddingDate: weddingDateDisplay.textContent,
+      speakers: speakers.map((sp,i) => ({
+        id: sp.id,
+        name: sp.name,
+        order: i,
+        finished: !!sp.finished,
+        actualSeconds: sp.actualSeconds != null ? sp.actualSeconds : null
+      }))
+    };
+    try{
+      await apiPost('/api/state', payload);
+      setSyncStatus('🟢 Lagret og publisert til gjestenes side');
+      return true;
+    }catch(e){
+      if(e.status === 401) setSyncStatus('🔴 Feil admin-nøkkel — endringer ble ikke publisert');
+      else setSyncStatus('🟡 Kunne ikke publisere (sjekk internett) — lagret lokalt');
+      return false;
+    }
+  }
+
+  function currentSpeaker(){ return speakers[currentIndex] || null; }
+
+  function stopTick(){
+    if(tickHandle){ clearInterval(tickHandle); tickHandle = null; }
+  }
+
+  function pauseTimer(){
+    if(running){
+      elapsedMs += (Date.now() - startTs);
+      running = false;
+    }
+    stopTick();
+    startBtn.textContent = 'Start';
+    startBtn.classList.remove('stop');
+  }
+
+  function startTimer(){
+    if(!currentSpeaker()) return;
+    running = true;
+    startTs = Date.now();
+    startBtn.textContent = 'Pause';
+    startBtn.classList.add('stop');
+    stopTick();
+    tickHandle = setInterval(render, 100);
+    render();
+  }
+
+  function toggleTimer(){
+    if(!currentSpeaker()) return;
+    if(running) pauseTimer(); else startTimer();
+  }
+
+  function clearFx(){
+    fxLayer.innerHTML = '';
+    ringWrap.classList.remove('glitch-shake');
+    ringFg.classList.remove('ring-glitch');
+    glitchCaption.classList.remove('show');
+  }
+
+  function setOvertimeStage(newStage){
+    if(newStage === overtimeStage) return;
+    overtimeStage = newStage;
+    clearFx();
+    if(newStage >= 1){
+      const orbit = document.createElement('div');
+      orbit.className = 'orbit-turtle';
+      const r = (ringWrap.clientWidth/2) * 0.92;
+      orbit.style.setProperty('--orbit-r', r + 'px');
+      const inner = document.createElement('div');
+      inner.className = 'emoji';
+      inner.textContent = '🐢';
+      orbit.appendChild(inner);
+      fxLayer.appendChild(orbit);
+    }
+    if(newStage >= 2){
+      const yawn = document.createElement('div');
+      yawn.className = 'yawn-badge';
+      yawn.textContent = '🥱';
+      fxLayer.appendChild(yawn);
+    }
+    if(newStage >= 3){
+      ringWrap.classList.add('glitch-shake');
+      ringFg.classList.add('ring-glitch');
+      glitchCaption.classList.add('show');
+    }
+  }
+
+  function resetOvertimeState(){
+    crossedRed = false;
+    setOvertimeStage(0);
+    document.body.classList.remove('state-over');
+    hideBanner();
+  }
+
+  function resetTimer(){
+    pauseTimer();
+    elapsedMs = 0;
+    resetOvertimeState();
+    render();
+  }
+
+  function getElapsedSec(){
+    let ms = elapsedMs;
+    if(running) ms += (Date.now() - startTs);
+    return ms/1000;
+  }
+
+  function selectSpeaker(idx){
+    if(idx < 0 || idx >= speakers.length) return;
+    pauseTimer();
+    elapsedMs = 0;
+    currentIndex = idx;
+    resetOvertimeState();
+    render();
+  }
+
+  function showBanner(text){
+    overtimeBanner.textContent = text;
+    overtimeBanner.classList.add('show');
+    flashOverlay.classList.remove('fire');
+    void flashOverlay.offsetWidth;
+    flashOverlay.classList.add('fire');
+    if(bannerHideTimer) clearTimeout(bannerHideTimer);
+    bannerHideTimer = setTimeout(hideBanner, 3200);
+  }
+  function hideBanner(){
+    overtimeBanner.classList.remove('show');
+    if(bannerHideTimer){ clearTimeout(bannerHideTimer); bannerHideTimer = null; }
+  }
+
+  function scrambleDigits(str){
+    return str.split('').map(ch => (/\d/.test(ch) && Math.random() < 0.6) ? String(Math.floor(Math.random()*10)) : ch).join('');
+  }
+
+  function render(){
+    const sp = currentSpeaker();
+    if(!sp){
+      speakerNameEl.textContent = 'Legg til talere for å starte';
+      timerDisplay.textContent = '00:00';
+      deltaLabel.innerHTML = '&nbsp;';
+      ringFg.style.strokeDashoffset = CIRC;
+      statusBarFill.style.width = '0%';
+      barMaxLabel.textContent = '—';
+      startBtn.disabled = true; resetBtn.disabled = true; finishBtn.disabled = true;
+      prevBtn.disabled = true; nextBtn.disabled = true;
+      document.body.classList.remove('state-warning','state-over');
+      setOvertimeStage(0);
+      return;
+    }
+    startBtn.disabled = false; resetBtn.disabled = false; finishBtn.disabled = false;
+    prevBtn.disabled = currentIndex === 0;
+    nextBtn.disabled = currentIndex === speakers.length - 1;
+
+    const elapsed = getElapsedSec();
+
+    speakerNameEl.textContent = sp.name || 'Uten navn';
+    timerDisplay.textContent = fmt(elapsed);
+
+    timerDisplay.classList.remove('warning','over','pulse','glitch-text');
+    ringFg.classList.remove('warning','over');
+    deltaLabel.classList.remove('over');
+    statusBarFill.classList.remove('warning','over');
+    document.body.classList.remove('state-warning','state-over');
+
+    let zone;
+    if(elapsed < ORANGE_AT) zone = 'normal';
+    else if(elapsed < RED_AT) zone = 'warning';
+    else zone = 'over';
+
+    if(zone === 'normal'){
+      deltaLabel.textContent = fmt(ORANGE_AT - elapsed) + ' til gult';
+      resetOvertimeState();
+    } else if(zone === 'warning'){
+      timerDisplay.classList.add('warning');
+      ringFg.classList.add('warning');
+      statusBarFill.classList.add('warning');
+      document.body.classList.add('state-warning');
+      const ratio = (elapsed - ORANGE_AT) / (RED_AT - ORANGE_AT);
+      const pulseSpeed = Math.max(0.6, 2.4 - ratio*1.8);
+      document.documentElement.style.setProperty('--pulse-speed', pulseSpeed + 's');
+      deltaLabel.textContent = fmt(RED_AT - elapsed) + ' til rødt';
+      resetOvertimeState();
+    } else {
+      timerDisplay.classList.add('over');
+      ringFg.classList.add('over');
+      statusBarFill.classList.add('over');
+      deltaLabel.classList.add('over');
+      document.body.classList.add('state-over');
+      document.documentElement.style.setProperty('--pulse-speed', '0.6s');
+
+      const overtimeSec = elapsed - RED_AT;
+      if(!crossedRed){
+        crossedRed = true;
+        showBanner('⏰ 7 minutter er nådd!');
+      }
+      const newStage = overtimeSec <= STAGE1_MAX ? 1 : (overtimeSec <= STAGE2_MAX ? 2 : 3);
+      setOvertimeStage(newStage);
+
+      if(newStage <= 2){
+        timerDisplay.classList.add('pulse');
+        deltaLabel.textContent = '+' + fmt(overtimeSec) + ' over tiden 🐢';
+      } else {
+        deltaLabel.textContent = '+' + fmt(overtimeSec) + ' over tiden — noe har gått galt...';
+        if(Math.random() < 0.3){
+          timerDisplay.textContent = scrambleDigits(fmt(elapsed));
+          timerDisplay.classList.add('glitch-text');
+        }
+      }
+    }
+
+    const scale = Math.max(RED_AT*1.3, elapsed*1.05, 60);
+    const fillPct = Math.min(elapsed/scale, 1) * 100;
+    statusBarFill.style.width = fillPct + '%';
+    marker5.style.left = (Math.min(ORANGE_AT/scale,1)*100) + '%';
+    marker7.style.left = (Math.min(RED_AT/scale,1)*100) + '%';
+    barMaxLabel.textContent = fmt(scale);
+
+    const ratioForRing = Math.min(elapsed / RED_AT, 1);
+    ringFg.style.strokeDashoffset = CIRC * (1 - ratioForRing);
+  }
+
+  function finishSpeech(){
+    if(!currentSpeaker()) return;
+    if(!resultOverlay.classList.contains('hidden')) return;
+    pauseTimer();
+    const finalElapsed = getElapsedSec();
+    const sp = currentSpeaker();
+    sp.finished = true;
+    sp.actualSeconds = Math.round(finalElapsed);
+    saveSpeakers();
+    showResult(finalElapsed, sp);
+    resultPublishNote.textContent = 'Publiserer resultatet til gjestenes side...';
+    pushStateToServer().then(ok => {
+      resultPublishNote.textContent = ok
+        ? '✅ Resultatet er publisert til gjestenes gjettekonkurranse'
+        : '⚠️ Kunne ikke publisere — sjekk admin-nøkkel/internett og trykk «Hent fra server» / «Lagre» senere';
+    });
+  }
+
+  function showResult(finalElapsed, sp){
+    const guess = plannedSeconds(sp);
+    const withinLimit = finalElapsed <= RED_AT;
+
+    resultEmoji.textContent = withinLimit ? '🎉' : '🐢';
+    resultTitle.textContent = withinLimit ? 'Innenfor tiden!' : 'Over grensen...';
+    resultSpeakerName.textContent = sp.name || 'Uten navn';
+    resultActual.textContent = fmt(finalElapsed);
+
+    if(guess > 0){
+      resultGuess.textContent = fmt(guess);
+      resultGaugeWrap.style.display = '';
+      const diff = finalElapsed - guess;
+      const absDiff = Math.abs(diff);
+      let emoji, text;
+      if(absDiff <= 15){ emoji='🎯'; text='Blink! Brudeparet gjettet nesten perfekt.'; }
+      else if(absDiff <= 45){ emoji='👏'; text='Nære nok — godt gjettet av brudeparet!'; }
+      else if(absDiff <= 90){ emoji='😅'; text='Bommet litt på brudeparet.'; }
+      else { emoji='🤷'; text='Bommet stort — helt ute å kjøre!'; }
+      resultVerdict.innerHTML = emoji + ' ' + text + '<br>' + (diff>=0?'+':'−') + fmt(absDiff) + ' fra gjetningen';
+
+      const scale = Math.max(finalElapsed, guess, 60) * 1.25;
+      const actualPct = Math.min(finalElapsed/scale, 1) * 100;
+      const guessPct = Math.min(guess/scale, 1) * 100;
+      resultGaugeFill.style.width = actualPct + '%';
+      gaugeActualMarker.style.left = actualPct + '%';
+      gaugeGuessMarker.style.left = guessPct + '%';
+    } else {
+      resultGuess.textContent = 'Ikke gjettet';
+      resultGaugeWrap.style.display = 'none';
+      resultVerdict.textContent = 'Ingen privat gjetning registrert for denne taleren.';
+    }
+
+    resultOverlay.classList.remove('hidden');
+    if(withinLimit){ launchConfetti(); }
+  }
+
+  function launchConfetti(){
+    confettiLayer.innerHTML = '';
+    const colors = ['#b8935a','#c98e86','#8a9a7e','#c99a4b','#f2e9dc','#d9bd8c'];
+    const count = 90;
+    for(let i=0;i<count;i++){
+      const p = document.createElement('div');
+      p.className = 'confetti-piece';
+      const size = 6 + Math.random()*8;
+      const isRound = Math.random() < 0.5;
+      p.style.width = size + 'px';
+      p.style.height = (isRound ? size : size*1.5) + 'px';
+      p.style.background = colors[Math.floor(Math.random()*colors.length)];
+      p.style.borderRadius = isRound ? '50%' : '2px';
+      p.style.left = (Math.random()*100) + '%';
+      const duration = 2.6 + Math.random()*1.8;
+      const delay = Math.random()*0.6;
+      p.style.animationDuration = duration + 's';
+      p.style.animationDelay = delay + 's';
+      confettiLayer.appendChild(p);
+      setTimeout(() => { p.remove(); }, (duration+delay)*1000 + 200);
+    }
+  }
+
+  function closeResult(){
+    resultOverlay.classList.add('hidden');
+    confettiLayer.innerHTML = '';
+  }
+
+  function renderEditor(){
+    speakerListEditor.innerHTML = '';
+    speakers.forEach((sp, i) => {
+      const row = document.createElement('div');
+      row.className = 'speaker-row' + (i===currentIndex ? ' active' : '') + (sp.finished ? ' done' : '');
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = sp.name;
+      nameInput.addEventListener('input', () => { sp.name = nameInput.value; saveSpeakers(); if(i===currentIndex) render(); });
+
+      const minInput = document.createElement('input');
+      minInput.type = 'number'; minInput.min = 0; minInput.value = sp.min;
+      minInput.title = 'minutter (privat gjetning)';
+      minInput.addEventListener('input', () => { sp.min = parseInt(minInput.value)||0; saveSpeakers(); });
+
+      const sepSpan = document.createElement('span'); sepSpan.textContent = ':'; sepSpan.style.color='var(--charcoal-soft)';
+
+      const secInput = document.createElement('input');
+      secInput.type = 'number'; secInput.min = 0; secInput.max = 59; secInput.value = sp.sec;
+      secInput.title = 'sekunder (privat gjetning)';
+      secInput.addEventListener('input', () => { sp.sec = Math.min(59, parseInt(secInput.value)||0); saveSpeakers(); });
+
+      const statusSpan = document.createElement('span');
+      statusSpan.style.fontSize = '11px';
+      statusSpan.style.color = 'var(--charcoal-soft)';
+      statusSpan.style.minWidth = '54px';
+      statusSpan.textContent = sp.finished ? ('✅ ' + fmt(sp.actualSeconds||0)) : '⏳';
+
+      const upBtn = document.createElement('button');
+      upBtn.className = 'row-btn'; upBtn.textContent = '↑'; upBtn.title = 'Flytt opp';
+      upBtn.disabled = i===0;
+      upBtn.addEventListener('click', () => {
+        [speakers[i-1], speakers[i]] = [speakers[i], speakers[i-1]];
+        if(currentIndex===i) currentIndex=i-1; else if(currentIndex===i-1) currentIndex=i;
+        saveSpeakers(); renderEditor(); render();
+      });
+
+      const downBtn = document.createElement('button');
+      downBtn.className = 'row-btn'; downBtn.textContent = '↓'; downBtn.title = 'Flytt ned';
+      downBtn.disabled = i===speakers.length-1;
+      downBtn.addEventListener('click', () => {
+        [speakers[i+1], speakers[i]] = [speakers[i], speakers[i+1]];
+        if(currentIndex===i) currentIndex=i+1; else if(currentIndex===i+1) currentIndex=i;
+        saveSpeakers(); renderEditor(); render();
+      });
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'row-btn danger'; delBtn.textContent = '✕'; delBtn.title = 'Slett';
+      delBtn.addEventListener('click', () => {
+        speakers.splice(i,1);
+        if(currentIndex >= speakers.length) currentIndex = Math.max(0, speakers.length-1);
+        pauseTimer(); elapsedMs = 0; resetOvertimeState();
+        saveSpeakers(); renderEditor(); render();
+      });
+
+      row.append(nameInput, minInput, sepSpan, secInput, statusSpan, upBtn, downBtn, delBtn);
+      speakerListEditor.appendChild(row);
+    });
+    if(speakers.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'Ingen talere lagt til ennå.';
+      speakerListEditor.appendChild(empty);
+    }
+  }
+
+  addSpeakerBtn.addEventListener('click', () => {
+    const name = newName.value.trim();
+    if(!name) { newName.focus(); return; }
+    speakers.push({
+      id: genId(),
+      name,
+      min: parseInt(newMin.value)||0,
+      sec: Math.min(59, parseInt(newSec.value)||0),
+      finished: false,
+      actualSeconds: null
+    });
+    newName.value=''; newMin.value=''; newSec.value='';
+    saveSpeakers(); renderEditor(); render();
+    newName.focus();
+  });
+
+  [newName, newMin, newSec].forEach(el => {
+    el.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); addSpeakerBtn.click(); } });
+  });
+
+  startBtn.addEventListener('click', toggleTimer);
+  finishBtn.addEventListener('click', finishSpeech);
+  resetBtn.addEventListener('click', resetTimer);
+  prevBtn.addEventListener('click', () => selectSpeaker(currentIndex-1));
+  nextBtn.addEventListener('click', () => selectSpeaker(currentIndex+1));
+  resultCloseBtn.addEventListener('click', closeResult);
+  resultNextBtn.addEventListener('click', () => { closeResult(); selectSpeaker(currentIndex+1); });
+
+  fullscreenBtn.addEventListener('click', () => {
+    if(!document.fullscreenElement){ document.documentElement.requestFullscreen().catch(()=>{}); }
+    else { document.exitFullscreen(); }
+  });
+
+  function syncFsClass(){
+    if(document.fullscreenElement){ document.body.classList.add('fs-active'); }
+    else { document.body.classList.remove('fs-active'); }
+  }
+  document.addEventListener('fullscreenchange', syncFsClass);
+  document.addEventListener('webkitfullscreenchange', syncFsClass);
+
+  editBtn.addEventListener('click', () => {
+    renderEditor();
+    editModal.classList.remove('hidden');
+  });
+  pullBtn.addEventListener('click', async () => {
+    pullBtn.disabled = true;
+    pullBtn.textContent = 'Henter...';
+    await syncFromServer();
+    renderEditor();
+    render();
+    pullBtn.disabled = false;
+    pullBtn.textContent = '🔄 Hent fra server';
+  });
+  closeModalBtn.addEventListener('click', async () => {
+    saveBrand();
+    coupleNamesDisplay.textContent = coupleNamesInput.value || 'Karoline & Peter';
+    weddingDateDisplay.textContent = weddingDateInput.value || '';
+    editModal.classList.add('hidden');
+    await pushStateToServer();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if(!editModal.classList.contains('hidden')) return;
+    if(!resultOverlay.classList.contains('hidden')){
+      if(e.key === 'Enter' || e.key === 'ArrowRight'){ e.preventDefault(); resultNextBtn.click(); }
+      else if(e.key === 'Escape' || e.key === 'c' || e.key === 'C'){ closeResult(); }
+      return;
+    }
+    if(e.code === 'Space'){ e.preventDefault(); toggleTimer(); }
+    else if(e.key === 'Enter'){ e.preventDefault(); finishSpeech(); }
+    else if(e.key === 'r' || e.key === 'R'){ resetTimer(); }
+    else if(e.key === 'ArrowLeft'){ selectSpeaker(currentIndex-1); }
+    else if(e.key === 'ArrowRight'){ selectSpeaker(currentIndex+1); }
+    else if(e.key === 'f' || e.key === 'F'){ fullscreenBtn.click(); }
+    else if(e.key === 'e' || e.key === 'E'){ editBtn.click(); }
+  });
+
+  (async function init(){
+    loadBrand();
+    render();
+    await syncFromServer();
+    render();
+    if(speakers.length === 0){ editModal.classList.remove('hidden'); renderEditor(); }
+  })();
+})();
+</script>
+</body>
+</html>

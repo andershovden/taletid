@@ -1,0 +1,9 @@
+{
+  "name": "bryllup-taletid",
+  "private": true,
+  "type": "module",
+  "description": "Toastmaster taletid-app med gjettekonkurranse for bryllupsgjester",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}
