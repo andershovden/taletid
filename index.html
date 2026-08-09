@@ -59,6 +59,12 @@
     margin-top:-6px;
     margin-bottom:18px;
   }
+  .speaker-result .head .pill{ font-size:9px; }
+  .guess-count{
+    font-size:12px;
+    color:var(--charcoal-soft);
+    margin-bottom:8px;
+  }
 </style>
 </head>
 <body>
@@ -83,8 +89,8 @@
   </div>
 
   <div class="card" id="resultsCard">
-    <h2>🏆 Resultater</h2>
-    <div class="sub">Oppdateres automatisk etter hvert som talerne blir ferdige.</div>
+    <h2>🎲 Gjetninger &amp; resultater</h2>
+    <div class="sub">Her ser du med en gang hva alle har gjettet på hver taler. Fasit og poeng dukker opp så snart taleren er ferdig.</div>
     <div id="resultsBody"></div>
   </div>
 
@@ -255,10 +261,10 @@
   }
 
   function renderResults(){
-    const finished = (state.speakers || []).filter(s => s.finished).sort((a,b)=> (a.order||0) - (b.order||0));
+    const speakers = (state.speakers || []).slice().sort((a,b)=> (a.order||0) - (b.order||0));
 
-    if(finished.length === 0){
-      resultsBody.innerHTML = '<div class="empty-note">Ingen resultater ennå — kom tilbake når første taler er ferdig!</div>';
+    if(speakers.length === 0){
+      resultsBody.innerHTML = '<div class="empty-note">Ingen talere er lagt inn ennå.</div>';
       leaderboardCard.style.display = 'none';
       winnerZone.innerHTML = '';
       return;
@@ -267,37 +273,56 @@
     let html = '';
     const totals = {}; // key -> { name, points }
 
-    finished.forEach(sp => {
-      const guesses = guessListForSpeaker(sp.id).map(g => {
-        const diff = Math.abs(g.guess - sp.actualSeconds);
-        return { ...g, diff, pts: A.points(diff) };
-      }).sort((a,b) => a.diff - b.diff);
-
-      const minDiff = guesses.length ? guesses[0].diff : null;
-
+    speakers.forEach(sp => {
+      const rawGuesses = guessListForSpeaker(sp.id);
       html += '<div class="speaker-result">';
-      html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="actual">'+A.fmt(sp.actualSeconds)+'</span></div>';
 
-      if(guesses.length === 0){
-        html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen gjettet på denne taleren.</div>';
+      if(sp.finished){
+        // Taleren er ferdig: vis fasit, avvik og poeng
+        const guesses = rawGuesses.map(g => {
+          const diff = Math.abs(g.guess - sp.actualSeconds);
+          return { ...g, diff, pts: A.points(diff) };
+        }).sort((a,b) => a.diff - b.diff);
+        const minDiff = guesses.length ? guesses[0].diff : null;
+
+        html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="actual">'+A.fmt(sp.actualSeconds)+'</span></div>';
+
+        if(guesses.length === 0){
+          html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen gjettet på denne taleren.</div>';
+        } else {
+          html += '<table class="lb"><thead><tr><th>Navn</th><th class="num">Gjetning</th><th class="num">Avvik</th><th class="num">Poeng</th></tr></thead><tbody>';
+          guesses.forEach(g => {
+            const bonus = (g.diff === minDiff) ? 10 : 0;
+            const totalPts = g.pts + bonus;
+            totals[g.key] = totals[g.key] || { name: g.name, points: 0 };
+            totals[g.key].points += totalPts;
+            const closestTag = bonus > 0 ? ' 🎯' : '';
+            html += '<tr><td>'+escapeHtml(g.name)+closestTag+'</td><td class="num">'+A.fmt(g.guess)+'</td><td class="num">'+A.fmt(g.diff)+'</td><td class="num">'+totalPts+'</td></tr>';
+          });
+          html += '</tbody></table>';
+        }
       } else {
-        html += '<table class="lb"><thead><tr><th>Navn</th><th class="num">Gjetning</th><th class="num">Avvik</th><th class="num">Poeng</th></tr></thead><tbody>';
-        guesses.forEach(g => {
-          const bonus = (g.diff === minDiff) ? 10 : 0;
-          const totalPts = g.pts + bonus;
-          totals[g.key] = totals[g.key] || { name: g.name, points: 0 };
-          totals[g.key].points += totalPts;
-          const closestTag = bonus > 0 ? ' 🎯' : '';
-          html += '<tr><td>'+escapeHtml(g.name)+closestTag+'</td><td class="num">'+A.fmt(g.guess)+'</td><td class="num">'+A.fmt(g.diff)+'</td><td class="num">'+totalPts+'</td></tr>';
-        });
-        html += '</tbody></table>';
+        // Ikke ferdig ennå: vis kun hva folk har gjettet så langt, uten fasit
+        const guesses = rawGuesses.slice().sort((a,b) => a.guess - b.guess);
+        html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="pill wait">Venter</span></div>';
+
+        if(guesses.length === 0){
+          html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen har gjettet på denne ennå.</div>';
+        } else {
+          html += '<div class="guess-count">🎲 '+guesses.length+' stk. har gjettet så langt</div>';
+          html += '<table class="lb"><thead><tr><th>Navn</th><th class="num">Gjetning</th></tr></thead><tbody>';
+          guesses.forEach(g => {
+            html += '<tr><td>'+escapeHtml(g.name)+'</td><td class="num">'+A.fmt(g.guess)+'</td></tr>';
+          });
+          html += '</tbody></table>';
+        }
       }
       html += '</div>';
     });
 
     resultsBody.innerHTML = html;
 
-    // Leaderboard
+    // Leaderboard — bygges kun fra talere som er ferdige
     const rows = Object.values(totals).sort((a,b) => b.points - a.points);
     if(rows.length > 0){
       leaderboardCard.style.display = '';
@@ -312,8 +337,8 @@
       leaderboardCard.style.display = 'none';
     }
 
-    // Winner banner if every speaker is finished
-    const allDone = state.speakers.length > 0 && state.speakers.every(s => s.finished);
+    // Vinnerbanner når alle talere er ferdige
+    const allDone = speakers.length > 0 && speakers.every(s => s.finished);
     if(allDone && rows.length > 0){
       const winner = rows[0];
       winnerZone.innerHTML =
