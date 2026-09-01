@@ -966,7 +966,10 @@
   let bannerHideTimer = null;
 
   let scene = 'pause'; // 'pause' | 'live' | 'finished'
-  let guessesData = {};
+  // lbData kommer fra /api/leaderboard, som er den ENE kilden til sannhet for poeng og
+  // rangering (netlify/functions/leaderboard.mjs). Storskjermen gjør ingen egen
+  // poengberegning, slik at admin og gjettesiden aldri kan vise ulike resultater.
+  let lbData = { coupleNames: '', weddingDate: '', allDone: false, speakers: [], leaderboard: [] };
   let confettiInterval = null;
   let bubbleInterval = null;
 
@@ -1179,27 +1182,16 @@
 
   async function pollGuesses(){
     try{
-      const g = await apiGet('/api/guess');
-      guessesData = g.guesses || {};
+      lbData = await apiGet('/api/leaderboard');
     }catch(e){ /* behold sist kjente data */ }
     renderLiveGuesses();
-  }
-
-  function guessListForSpeaker(speakerId){
-    const list = [];
-    Object.keys(guessesData).forEach(key => {
-      const rec = guessesData[key];
-      if(rec.entries && rec.entries[speakerId] != null){
-        list.push({ key, name: rec.name, guess: rec.entries[speakerId] });
-      }
-    });
-    return list;
   }
 
   function renderLiveGuesses(){
     const sp = currentSpeaker();
     if(!sp){ liveGuessList.innerHTML = ''; liveRightCount.textContent = ''; return; }
-    const guesses = guessListForSpeaker(sp.id).slice().sort((a,b)=>a.guess-b.guess);
+    const lbSpeaker = (lbData.speakers || []).find(s => s.id === sp.id);
+    const guesses = (lbSpeaker && lbSpeaker.guesses) || [];
     liveRightCount.textContent = guesses.length === 0
       ? 'Ingen bord har gjettet ennå'
       : guesses.length + (guesses.length===1 ? ' bord har gjettet' : ' bord har gjettet');
@@ -1212,26 +1204,12 @@
     ).join('');
   }
 
-  function computeLeaderboard(){
-    const totals = {};
-    speakers.filter(s => s.finished && s.actualSeconds != null).forEach(sp => {
-      const guesses = guessListForSpeaker(sp.id).map(g => {
-        const diff = Math.abs(g.guess - sp.actualSeconds);
-        return { ...g, diff, pts: Math.max(0, Math.round(50 - diff/6)) };
-      });
-      const minDiff = guesses.length ? Math.min(...guesses.map(g => g.diff)) : null;
-      guesses.forEach(g => {
-        const bonus = g.diff === minDiff ? 10 : 0;
-        totals[g.key] = totals[g.key] || { name: g.name, points: 0 };
-        totals[g.key].points += g.pts + bonus;
-      });
-    });
-    return Object.values(totals).sort((a,b) => b.points - a.points);
-  }
-
   function renderFinishedLeaderboard(){
-    const rows = computeLeaderboard();
-    const allDone = speakers.length > 0 && speakers.every(s => s.finished);
+    // rows kommer FERDIG UTREGNET OG SORTERT fra /api/leaderboard, med flernivås
+    // tie-break (poeng → avvik → nærmest-bonuser → innsendingstidspunkt → navn), så
+    // rows[0] er alltid én unik vinner — det kan aldri bli uavgjort.
+    const rows = lbData.leaderboard || [];
+    const allDone = !!lbData.allDone;
     finishedHeading.textContent = allDone ? '🏆 Vinneren er kåret!' : '🏆 Stillingen så langt';
     if(rows.length === 0){
       finishedSub.textContent = 'Ingen gjetninger å vise ennå';
@@ -1508,7 +1486,10 @@
     sp.finished = true;
     sp.actualSeconds = Math.round(finalElapsed);
     saveSpeakers();
-    pushStateToServer().then(() => { pollGuesses(); renderFinishedLeaderboard(); });
+    // Poeng/rangering regnes ut på serveren (/api/leaderboard) og krever at det nettopp
+    // publiserte resultatet er lagret der først — vent derfor på hele kjeden før vi
+    // henter og viser den ferdige tavlen, så tallene som vises alltid stemmer.
+    pushStateToServer().then(() => pollGuesses()).then(() => renderFinishedLeaderboard());
     advanceToNextUnfinished();
     flyOutAndShowLeaderboard();
   }
@@ -1533,6 +1514,7 @@
     setTimeout(() => {
       setScene('finished');
       liveLeft.classList.remove('fly-out');
+      renderFinishedLeaderboard(); // fanger opp ferske serverdata om de har rukket å komme inn
       startConfettiLoop();
       if(allDone) startBubbleLoop();
     }, 650);
