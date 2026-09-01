@@ -111,7 +111,7 @@
   </div>
 
   <div class="card" id="resultsCard">
-    <h2>🎲 Gjetninger &amp; resultater</h2>
+    <h2>🔮 Gjetninger &amp; resultater</h2>
     <div class="sub">Her ser du med en gang hva alle har gjettet på hver taler. Fasit og poeng dukker opp så snart taleren er ferdig.</div>
     <div id="resultsBody"></div>
   </div>
@@ -336,7 +336,7 @@
         if(guesses.length === 0){
           html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen har gjettet på denne ennå.</div>';
         } else {
-          html += '<div class="guess-count">🎲 '+guesses.length+' '+(guesses.length===1?'bord har':'bord har')+' gjettet så langt</div>';
+          html += '<div class="guess-count">🔮 '+guesses.length+' '+(guesses.length===1?'bord har':'bord har')+' gjettet så langt</div>';
           html += '<table class="lb"><thead><tr><th>Bord</th><th class="num">Gjetning</th></tr></thead><tbody>';
           guesses.forEach(g => {
             html += '<tr><td>'+escapeHtml(g.name)+'</td><td class="num">'+A.fmt(g.guess)+'</td></tr>';
