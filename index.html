@@ -142,8 +142,11 @@
   const brandNames = document.getElementById('brandNames');
   const brandDate = document.getElementById('brandDate');
 
-  let state = { speakers: [] };
-  let guessesData = {};
+  // lbData kommer fra /api/leaderboard, som er den ENE kilden til sannhet for både
+  // talerlisten og poeng/rangering. Da kan gjettesiden og storskjermen aldri vise
+  // ulike resultater eller ulik rekkefølge på ledertavlen.
+  let lbData = { coupleNames: '', weddingDate: '', allDone: false, speakers: [], leaderboard: [] };
+  let state = { speakers: [] }; // avledet av lbData.speakers, holdt for å gjenbruke eksisterende funksjoner
   let myEntries = JSON.parse(localStorage.getItem('wg_my_entries') || '{}');
   let winnerCelebrated = false;
   let lastRenderedKey = null; // brukes for å unngå å bygge skjemaet på nytt (og slette det brukeren skriver) ved hver auto-oppdatering
@@ -157,8 +160,8 @@
   }
 
   function renderBrand(){
-    brandNames.textContent = state.coupleNames || 'Karoline & Peter';
-    brandDate.textContent = state.weddingDate || '';
+    brandNames.textContent = lbData.coupleNames || 'Karoline & Peter';
+    brandDate.textContent = lbData.weddingDate || '';
   }
 
   function renderGuessForm(){
@@ -271,19 +274,11 @@
     return d.innerHTML;
   }
 
-  function guessListForSpeaker(speakerId){
-    const list = [];
-    Object.keys(guessesData).forEach(key => {
-      const rec = guessesData[key];
-      if(rec.entries && rec.entries[speakerId] != null){
-        list.push({ key, name: rec.name, guess: rec.entries[speakerId] });
-      }
-    });
-    return list;
-  }
-
   function renderResults(){
-    const speakers = (state.speakers || []).slice().sort((a,b)=> (a.order||0) - (b.order||0));
+    // speakers, poeng, avvik og rangering kommer FERDIG UTREGNET fra /api/leaderboard
+    // (netlify/functions/leaderboard.mjs) — index.html gjør ingen egen poengberegning,
+    // slik at denne siden og storskjermen aldri kan vise ulike tall.
+    const speakers = lbData.speakers || [];
 
     if(speakers.length === 0){
       resultsBody.innerHTML = '<div class="empty-note">Ingen talere er lagt inn ennå.</div>';
@@ -293,22 +288,16 @@
     }
 
     let html = '';
-    const totals = {}; // key -> { name, points }
 
     speakers.forEach(sp => {
-      const rawGuesses = guessListForSpeaker(sp.id);
       const coupleGuessHtml = sp.coupleGuessSeconds != null
         ? '<div class="couple-guess-row">💑 <span class="couple-guess-label">Brudeparet gjettet:</span> <span class="couple-guess-value">'+A.fmt(sp.coupleGuessSeconds)+'</span></div>'
         : '';
       html += '<div class="speaker-result">';
 
       if(sp.finished){
-        // Taleren er ferdig: vis fasit, avvik og poeng
-        const guesses = rawGuesses.map(g => {
-          const diff = Math.abs(g.guess - sp.actualSeconds);
-          return { ...g, diff, pts: A.points(diff) };
-        }).sort((a,b) => a.diff - b.diff);
-        const minDiff = guesses.length ? guesses[0].diff : null;
+        // Taleren er ferdig: vis fasit, avvik og poeng (allerede regnet ut av backend)
+        const guesses = sp.guesses || [];
 
         html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="actual">'+A.fmt(sp.actualSeconds)+'</span></div>';
         html += coupleGuessHtml;
@@ -318,18 +307,14 @@
         } else {
           html += '<table class="lb"><thead><tr><th>Bord</th><th class="num">Gjetning</th><th class="num">Avvik</th><th class="num">Poeng</th></tr></thead><tbody>';
           guesses.forEach(g => {
-            const bonus = (g.diff === minDiff) ? 10 : 0;
-            const totalPts = g.pts + bonus;
-            totals[g.key] = totals[g.key] || { name: g.name, points: 0 };
-            totals[g.key].points += totalPts;
-            const closestTag = bonus > 0 ? ' 🎯' : '';
-            html += '<tr><td>'+escapeHtml(g.name)+closestTag+'</td><td class="num">'+A.fmt(g.guess)+'</td><td class="num">'+A.fmt(g.diff)+'</td><td class="num">'+totalPts+'</td></tr>';
+            const closestTag = g.closest ? ' 🎯' : '';
+            html += '<tr><td>'+escapeHtml(g.name)+closestTag+'</td><td class="num">'+A.fmt(g.guess)+'</td><td class="num">'+A.fmt(g.diff)+'</td><td class="num">'+g.points+'</td></tr>';
           });
           html += '</tbody></table>';
         }
       } else {
         // Ikke ferdig ennå: vis kun hva folk har gjettet så langt, uten fasit
-        const guesses = rawGuesses.slice().sort((a,b) => a.guess - b.guess);
+        const guesses = sp.guesses || [];
         html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="pill wait">Venter</span></div>';
         html += coupleGuessHtml;
 
@@ -349,8 +334,8 @@
 
     resultsBody.innerHTML = html;
 
-    // Leaderboard — bygges kun fra talere som er ferdige
-    const rows = Object.values(totals).sort((a,b) => b.points - a.points);
+    // Leaderboard — allerede strengt sortert av backend (kan aldri bli uavgjort)
+    const rows = lbData.leaderboard || [];
     if(rows.length > 0){
       leaderboardCard.style.display = '';
       const medals = ['🥇','🥈','🥉'];
@@ -364,9 +349,8 @@
       leaderboardCard.style.display = 'none';
     }
 
-    // Vinnerbanner når alle talere er ferdige
-    const allDone = speakers.length > 0 && speakers.every(s => s.finished);
-    if(allDone && rows.length > 0){
+    // Vinnerbanner når alle talere er ferdige — rows[0] er alltid én unik vinner
+    if(lbData.allDone && rows.length > 0){
       const winner = rows[0];
       winnerZone.innerHTML =
         '<div class="winner-banner"><div class="trophy">🏆</div>'+
@@ -383,14 +367,12 @@
 
   async function loadAll(){
     try{
-      state = await A.apiGet('/api/state');
+      lbData = await A.apiGet('/api/leaderboard');
+      // state gjenbrukes kun av renderGuessForm(), som trenger id/navn/finished per taler
+      state = { coupleNames: lbData.coupleNames, weddingDate: lbData.weddingDate, speakers: lbData.speakers || [] };
     }catch(e){
       resultsBody.innerHTML = '<div class="status-msg err">Fikk ikke kontakt med serveren. Prøver igjen automatisk.</div>';
     }
-    try{
-      const g = await A.apiGet('/api/guess');
-      guessesData = g.guesses || {};
-    }catch(e){ /* ignore, keep last known */ }
     renderBrand();
     renderGuessForm();
     renderResults();
