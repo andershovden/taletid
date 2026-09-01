@@ -96,17 +96,17 @@
     <div class="brand-names" id="brandNames">Karoline &amp; Peter</div>
     <div class="brand-date" id="brandDate">&nbsp;</div>
   </div>
-  <div class="lead">🎤 Gjett hvor lang tid hver taler bruker — og se hvem som traff nærmest når talen er ferdig!</div>
+  <div class="lead">🎤 Bli enige som bord og gjett hvor lang tid hver taler bruker — se hvem som traff nærmest når talen er ferdig!</div>
 
   <div id="winnerZone"></div>
 
   <div class="card" id="guessCard">
     <h2>Gjett taletidene</h2>
-    <div class="sub">Skriv inn navnet ditt og gjett i minutter og sekunder. Du kan sende inn på nytt og oppdatere gjetningene dine helt frem til hver taler starter.</div>
-    <label for="guestName">Ditt navn</label>
-    <input type="text" id="guestName" placeholder="Navn og etternavn" maxlength="60">
+    <div class="sub">Bli enige som bord om ett felles tips per taler — én person skriver inn for hele bordet. Dere kan sende inn på nytt og oppdatere helt frem til hver taler starter.</div>
+    <label for="guestName">Bordets navn</label>
+    <input type="text" id="guestName" placeholder="F.eks. «Bord 5» eller «Tante Karis bord»" maxlength="60">
     <div id="speakerInputs" style="margin-top:14px;"></div>
-    <button class="primary" id="submitBtn" style="width:100%;margin-top:16px;">Send inn gjetningene mine</button>
+    <button class="primary" id="submitBtn" style="width:100%;margin-top:16px;">Send inn bordets gjetninger</button>
     <div id="submitStatus"></div>
   </div>
 
@@ -118,7 +118,7 @@
 
   <div class="card" id="leaderboardCard" style="display:none;">
     <h2>Sammenlagt</h2>
-    <div class="sub">Poeng for hver taler legges sammen — nærmest gjetning vinner mest.</div>
+    <div class="sub">Poeng for hver taler legges sammen — bordet med nærmest gjetning vinner mest.</div>
     <div id="leaderboardBody"></div>
   </div>
 
@@ -240,7 +240,7 @@
   submitBtn.addEventListener('click', async () => {
     const name = guestNameInput.value.trim();
     if(!name){
-      submitStatus.innerHTML = '<div class="status-msg err">Skriv inn navnet ditt først.</div>';
+      submitStatus.innerHTML = '<div class="status-msg err">Skriv inn bordets navn først.</div>';
       guestNameInput.focus();
       return;
     }
@@ -256,7 +256,7 @@
       localStorage.setItem('wg_guest_name', name);
       myEntries = { ...myEntries, ...entries };
       localStorage.setItem('wg_my_entries', JSON.stringify(myEntries));
-      submitStatus.innerHTML = '<div class="status-msg ok">Takk, '+escapeHtml(name)+'! Gjetningene dine er lagret. 🎉</div>';
+      submitStatus.innerHTML = '<div class="status-msg ok">Takk! Gjetningene til '+escapeHtml(name)+' er lagret. 🎉</div>';
       await loadAll();
     }catch(e){
       submitStatus.innerHTML = '<div class="status-msg err">Kunne ikke lagre gjetningene. Prøv igjen om litt.</div>';
@@ -316,7 +316,7 @@
         if(guesses.length === 0){
           html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen gjettet på denne taleren.</div>';
         } else {
-          html += '<table class="lb"><thead><tr><th>Navn</th><th class="num">Gjetning</th><th class="num">Avvik</th><th class="num">Poeng</th></tr></thead><tbody>';
+          html += '<table class="lb"><thead><tr><th>Bord</th><th class="num">Gjetning</th><th class="num">Avvik</th><th class="num">Poeng</th></tr></thead><tbody>';
           guesses.forEach(g => {
             const bonus = (g.diff === minDiff) ? 10 : 0;
             const totalPts = g.pts + bonus;
@@ -336,8 +336,8 @@
         if(guesses.length === 0){
           html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen har gjettet på denne ennå.</div>';
         } else {
-          html += '<div class="guess-count">🎲 '+guesses.length+' stk. har gjettet så langt</div>';
-          html += '<table class="lb"><thead><tr><th>Navn</th><th class="num">Gjetning</th></tr></thead><tbody>';
+          html += '<div class="guess-count">🎲 '+guesses.length+' '+(guesses.length===1?'bord har':'bord har')+' gjettet så langt</div>';
+          html += '<table class="lb"><thead><tr><th>Bord</th><th class="num">Gjetning</th></tr></thead><tbody>';
           guesses.forEach(g => {
             html += '<tr><td>'+escapeHtml(g.name)+'</td><td class="num">'+A.fmt(g.guess)+'</td></tr>';
           });
@@ -354,7 +354,7 @@
     if(rows.length > 0){
       leaderboardCard.style.display = '';
       const medals = ['🥇','🥈','🥉'];
-      let lbHtml = '<table class="lb"><thead><tr><th>Plass</th><th>Navn</th><th class="num">Poeng</th></tr></thead><tbody>';
+      let lbHtml = '<table class="lb"><thead><tr><th>Plass</th><th>Bord</th><th class="num">Poeng</th></tr></thead><tbody>';
       rows.forEach((r,i) => {
         lbHtml += '<tr><td>'+(medals[i]||('#'+(i+1)))+'</td><td>'+escapeHtml(r.name)+'</td><td class="num">'+r.points+'</td></tr>';
       });
