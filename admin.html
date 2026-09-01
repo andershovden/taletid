@@ -76,19 +76,10 @@
     margin-top:2px;
   }
   .sync-status{
-    font-size:11px;
-    color:var(--charcoal-soft);
-    margin-top:4px;
-    letter-spacing:0.05em;
-    display:inline-block;
-    padding:2px 10px;
-    border-radius:20px;
-    transition:background 0.2s ease, color 0.2s ease;
-  }
-  .sync-status.error{
-    background:var(--red);
-    color:#fff;
-    font-weight:700;
+    /* Skjult for publikum — admin-siden vises nå på storskjermen.
+       Status settes fortsatt i DOM-en (for evt. feilsøking via nettleserens
+       utviklerverktøy), men rendres aldri synlig på skjermen. */
+    display:none;
   }
 
   /* ---------- Scener ---------- */
@@ -695,19 +686,22 @@
   }
   .speaker-row{
     display:flex;
+    flex-wrap:wrap;
     align-items:center;
-    gap:8px;
+    gap:6px 8px;
     padding:8px 0;
     border-bottom:1px solid var(--line);
   }
   .speaker-row.active{background:var(--cream);border-radius:8px;padding:8px;}
   .speaker-row.done{opacity:0.6;}
   .speaker-row input[type=text]{
-    flex:1;
-    min-width:0;
+    flex:1 1 130px;
+    min-width:90px;
   }
   .speaker-row input[type=number]{
-    width:56px;
+    width:52px;
+    flex:0 0 52px;
+    padding:9px 6px;
   }
   input{
     font-family:'Montserrat',sans-serif;
@@ -722,6 +716,7 @@
   .row-btn{
     background:none;border:none;color:var(--charcoal-soft);
     font-size:16px;padding:4px 7px;border-radius:6px;
+    flex:0 0 auto;
   }
   .row-btn:hover{background:var(--cream);color:var(--charcoal);}
   .row-btn.danger:hover{color:var(--red);}
@@ -780,6 +775,38 @@
     0%{ transform:translateY(0) rotate(0deg); opacity:1; }
     100%{ transform:translateY(112vh) rotate(560deg); opacity:0.85; }
   }
+
+  #bubbleLayer{
+    position:fixed;inset:0;
+    z-index:62;
+    pointer-events:none;
+    overflow:hidden;
+  }
+  .bubble{
+    position:absolute;
+    bottom:-8%;
+    border-radius:50%;
+    background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.95), rgba(217,189,140,0.4) 55%, rgba(184,147,90,0.12) 100%);
+    box-shadow: inset 0 0 6px rgba(255,255,255,0.7), 0 0 3px rgba(184,147,90,0.25);
+    animation-name: bubbleRise;
+    animation-timing-function: ease-in;
+    animation-iteration-count:1;
+  }
+  @keyframes bubbleRise{
+    0%{ transform:translateY(0) translateX(0) scale(0.9); opacity:0; }
+    12%{ opacity:0.85; }
+    88%{ opacity:0.65; }
+    100%{ transform:translateY(-112vh) translateX(var(--drift,20px)) scale(1.05); opacity:0; }
+  }
+
+  .finished-prize{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-style:italic;
+    font-size:clamp(20px,2.4vw,34px);
+    color:var(--gold);
+    margin-bottom:0.6vh;
+  }
 </style>
 </head>
 <body>
@@ -787,6 +814,7 @@
 <div id="flashOverlay"></div>
 <div id="overtimeBanner">⏰ 7 minutter er nådd!</div>
 <div id="confettiLayer"></div>
+<div id="bubbleLayer"></div>
 
 <div id="app" data-scene="pause">
   <header class="brand">
@@ -847,6 +875,7 @@
   <div class="scene scene-finished" id="sceneFinished">
     <div class="finished-heading" id="finishedHeading">🏆 Stillingen</div>
     <div class="finished-sub" id="finishedSub"></div>
+    <div class="finished-prize" id="finishedPrize"></div>
     <div class="finished-leaderboard" id="finishedLeaderboard"></div>
     <button class="finished-continue" id="finishedContinueBtn">Videre (mellomrom)</button>
   </div>
@@ -940,6 +969,7 @@
   let scene = 'pause'; // 'pause' | 'live' | 'finished'
   let guessesData = {};
   let confettiInterval = null;
+  let bubbleInterval = null;
 
   const speakerNameEl = document.getElementById('speakerName');
   const targetValue = document.getElementById('targetValue');
@@ -991,6 +1021,8 @@
   const coupleNamesDisplay = document.getElementById('coupleNamesDisplay');
   const weddingDateDisplay = document.getElementById('weddingDateDisplay');
   const confettiLayer = document.getElementById('confettiLayer');
+  const bubbleLayer = document.getElementById('bubbleLayer');
+  const finishedPrize = document.getElementById('finishedPrize');
 
   const RADIUS = 54;
   const CIRC = 2 * Math.PI * RADIUS;
@@ -1204,10 +1236,12 @@
     finishedHeading.textContent = allDone ? '🏆 Vinneren er kåret!' : '🏆 Stillingen så langt';
     if(rows.length === 0){
       finishedSub.textContent = 'Ingen gjetninger å vise ennå';
+      finishedPrize.textContent = '';
       finishedLeaderboard.innerHTML = '<div class="live-empty">Ingen resultater ennå</div>';
       return;
     }
     finishedSub.textContent = allDone ? ('Gratulerer, ' + rows[0].name + '!') : (rows[0].name + ' leder foreløpig');
+    finishedPrize.textContent = allDone ? ('🍾 ' + rows[0].name + ' vinner en flaske bobler!') : '';
     const medals = ['🥇','🥈','🥉'];
     finishedLeaderboard.innerHTML = rows.map((r,i) =>
       '<div class="finished-row'+(i===0?' leader':'')+'"><span class="medal">'+(medals[i]||('#'+(i+1)))+'</span><span class="table-name">'+escapeHtml(r.name)+'</span><span class="table-points">'+r.points+' p</span></div>'
@@ -1420,13 +1454,13 @@
   function syncControlsForScene(){
     const sp = currentSpeaker();
     if(scene === 'pause'){
-      startBtn.disabled = !sp;
+      startBtn.disabled = !sp || sp.finished;
       finishBtn.disabled = true;
       resetBtn.disabled = true;
       prevBtn.disabled = currentIndex === 0;
       nextBtn.disabled = !sp || currentIndex === speakers.length - 1;
     } else if(scene === 'live'){
-      startBtn.disabled = false;
+      startBtn.disabled = true;
       finishBtn.disabled = false;
       resetBtn.disabled = false;
       prevBtn.disabled = true;
@@ -1442,17 +1476,25 @@
 
   function updateHint(){
     if(scene === 'pause') hintText.textContent = '← → = velg neste taler · Mellomrom = start talen · F = fullskjerm · E = rediger talere';
-    else if(scene === 'live') hintText.textContent = 'Mellomrom = pause/fortsett · Enter = ferdig · R = nullstill · F = fullskjerm';
+    else if(scene === 'live') hintText.textContent = 'Mellomrom / Enter = merk taler ferdig · R = nullstill klokken · F = fullskjerm';
     else hintText.textContent = 'Mellomrom = tilbake til pauseskjerm';
   }
 
   function updatePauseNext(){
     const sp = currentSpeaker();
-    pauseNext.innerHTML = sp ? ('Neste ut: <b>' + escapeHtml(sp.name || 'Uten navn') + '</b>') : 'Ingen talere lagt inn ennå';
+    const allDone = speakers.length > 0 && speakers.every(s => s.finished);
+    if(allDone){
+      pauseNext.innerHTML = '🎉 Alle talene er ferdig!';
+    } else if(sp){
+      pauseNext.innerHTML = 'Neste ut: <b>' + escapeHtml(sp.name || 'Uten navn') + '</b>';
+    } else {
+      pauseNext.innerHTML = 'Ingen talere lagt inn ennå';
+    }
   }
 
   function startFromPause(){
     if(!currentSpeaker()) return;
+    if(currentSpeaker().finished) return;
     setScene('live');
     renderLiveGuesses();
     startTimer();
@@ -1468,16 +1510,32 @@
     sp.actualSeconds = Math.round(finalElapsed);
     saveSpeakers();
     pushStateToServer().then(() => { pollGuesses(); renderFinishedLeaderboard(); });
+    advanceToNextUnfinished();
     flyOutAndShowLeaderboard();
   }
 
+  // Flytter markøren videre til neste taler som ikke er ferdig ennå, slik at
+  // pauseskjermen viser riktig "neste ut" etter at man har markert en tale ferdig.
+  function advanceToNextUnfinished(){
+    for(let i = currentIndex + 1; i < speakers.length; i++){
+      if(!speakers[i].finished){ currentIndex = i; elapsedMs = 0; resetOvertimeState(); return; }
+    }
+    for(let i = 0; i < speakers.length; i++){
+      if(!speakers[i].finished){ currentIndex = i; elapsedMs = 0; resetOvertimeState(); return; }
+    }
+    // Alle er ferdige — behold currentIndex som den er.
+    elapsedMs = 0;
+  }
+
   function flyOutAndShowLeaderboard(){
+    const allDone = speakers.length > 0 && speakers.every(s => s.finished);
     liveLeft.classList.add('fly-out');
     renderFinishedLeaderboard();
     setTimeout(() => {
       setScene('finished');
       liveLeft.classList.remove('fly-out');
       startConfettiLoop();
+      if(allDone) startBubbleLoop();
     }, 650);
   }
 
@@ -1512,9 +1570,38 @@
     confettiLayer.innerHTML = '';
   }
 
+  function launchBubbleBurst(count){
+    const n = count || 4;
+    for(let i=0;i<n;i++){
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      const size = 8 + Math.random()*28;
+      b.style.width = size + 'px';
+      b.style.height = size + 'px';
+      b.style.left = (Math.random()*100) + '%';
+      b.style.setProperty('--drift', (Math.random()*80-40) + 'px');
+      const duration = 4.5 + Math.random()*3.5;
+      const delay = Math.random()*0.5;
+      b.style.animationDuration = duration + 's';
+      b.style.animationDelay = delay + 's';
+      bubbleLayer.appendChild(b);
+      setTimeout(() => { b.remove(); }, (duration+delay)*1000 + 300);
+    }
+  }
+  function startBubbleLoop(){
+    stopBubbleLoop();
+    launchBubbleBurst(14);
+    bubbleInterval = setInterval(() => launchBubbleBurst(4), 320);
+  }
+  function stopBubbleLoop(){
+    if(bubbleInterval){ clearInterval(bubbleInterval); bubbleInterval = null; }
+    bubbleLayer.innerHTML = '';
+  }
+
   function goToPause(){
     if(scene !== 'finished') return;
     stopConfettiLoop();
+    stopBubbleLoop();
     setScene('pause');
     updatePauseNext();
   }
@@ -1545,7 +1632,8 @@
       const statusSpan = document.createElement('span');
       statusSpan.style.fontSize = '11px';
       statusSpan.style.color = 'var(--charcoal-soft)';
-      statusSpan.style.minWidth = '54px';
+      statusSpan.style.flex = '0 0 auto';
+      statusSpan.style.whiteSpace = 'nowrap';
       statusSpan.textContent = sp.finished ? ('✅ ' + fmt(sp.actualSeconds||0)) : '⏳';
 
       const upBtn = document.createElement('button');
@@ -1608,7 +1696,6 @@
 
   startBtn.addEventListener('click', () => {
     if(scene === 'pause') startFromPause();
-    else if(scene === 'live') toggleTimer();
   });
   finishBtn.addEventListener('click', finishSpeech);
   resetBtn.addEventListener('click', resetTimer);
@@ -1689,7 +1776,7 @@
     if(e.code === 'Space'){
       e.preventDefault();
       if(scene === 'pause') startFromPause();
-      else if(scene === 'live') toggleTimer();
+      else if(scene === 'live') finishSpeech();
       else if(scene === 'finished') goToPause();
       return;
     }
