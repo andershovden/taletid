@@ -52,8 +52,7 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:space-between;
-    padding:2.2vh 4vw;
+    padding:1.6vh 3vw;
     position:relative;
     z-index:2;
   }
@@ -61,10 +60,11 @@
     text-align:center;
     color:var(--charcoal-soft);
     letter-spacing:0.08em;
+    flex:0 0 auto;
   }
   .brand-names{
     font-family:'Cormorant Garamond',serif;
-    font-size:clamp(18px,2.1vw,28px);
+    font-size:clamp(16px,1.8vw,24px);
     font-style:italic;
     color:var(--gold);
     letter-spacing:0.12em;
@@ -76,23 +76,161 @@
     margin-top:2px;
   }
   .sync-status{
-    font-size:10px;
+    font-size:11px;
     color:var(--charcoal-soft);
     margin-top:4px;
     letter-spacing:0.05em;
+    display:inline-block;
+    padding:2px 10px;
+    border-radius:20px;
+    transition:background 0.2s ease, color 0.2s ease;
   }
-  .stage{
+  .sync-status.error{
+    background:var(--red);
+    color:#fff;
+    font-weight:700;
+  }
+
+  /* ---------- Scener ---------- */
+  .scene{
+    display:none;
     flex:1;
     width:100%;
-    max-width:1100px;
+    min-height:0;
+  }
+  #app[data-scene="pause"] .scene-pause{ display:flex; }
+  #app[data-scene="live"] .scene-live{ display:flex; }
+  #app[data-scene="finished"] .scene-finished{ display:flex; }
+
+  /* PAUSESKJERM */
+  .scene-pause{
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    gap:1.6vh;
+  }
+  .pause-logo{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-weight:600;
+    font-size:clamp(56px,9.5vw,168px);
+    color:var(--gold);
+    letter-spacing:0.04em;
+    line-height:1.05;
+  }
+  .pause-date{
+    font-size:clamp(13px,1.6vw,22px);
+    letter-spacing:0.35em;
+    text-transform:uppercase;
+    color:var(--charcoal-soft);
+  }
+  .pause-divider{
+    width:80px;
+    height:1px;
+    background:var(--line);
+    margin:0.6vh 0;
+  }
+  .pause-next{
+    font-size:clamp(16px,1.9vw,28px);
+    color:var(--charcoal);
+    font-weight:500;
+  }
+  .pause-next b{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    color:var(--gold);
+    font-size:1.15em;
+  }
+  .pause-hint{
+    margin-top:1.4vh;
+    font-size:clamp(11px,1vw,14px);
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--charcoal-soft);
+    opacity:0.75;
+  }
+
+  /* LIVE-SCENE: todelt */
+  .scene-live{
+    flex-direction:row;
+    align-items:stretch;
+    justify-content:center;
+    gap:3.5vw;
+  }
+  .live-left{
+    flex:1 1 54%;
+    max-width:900px;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
     text-align:center;
     gap:0.6vh;
+    min-width:0;
     position:relative;
-    min-height:0;
+    transition: transform 0.65s cubic-bezier(.5,0,.4,1), opacity 0.55s ease;
+  }
+  .live-left.fly-out{
+    transform: translateX(-140%) rotate(-4deg);
+    opacity:0;
+  }
+  .live-right{
+    flex:1 1 38%;
+    max-width:520px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    min-width:0;
+  }
+  .live-right-heading{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:clamp(24px,2.6vw,38px);
+    color:var(--charcoal);
+    text-align:center;
+    margin-bottom:2px;
+  }
+  .live-right-sub{
+    text-align:center;
+    font-size:clamp(12px,1.05vw,16px);
+    color:var(--charcoal-soft);
+    margin-bottom:16px;
+    letter-spacing:0.03em;
+  }
+  .live-guess-list{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:6px 0;
+    box-shadow:var(--shadow);
+    max-height:58vh;
+    overflow-y:auto;
+  }
+  .live-guess-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 26px;
+    font-size:clamp(15px,1.5vw,21px);
+    border-bottom:1px solid var(--line);
+  }
+  .live-guess-row:last-child{ border-bottom:none; }
+  .live-guess-row .table-name{ font-weight:700; }
+  .live-guess-row .table-guess{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    color:var(--gold);
+    font-variant-numeric:tabular-nums;
+    font-size:1.2em;
+  }
+  .live-empty{
+    text-align:center;
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:clamp(16px,1.6vw,22px);
+    color:var(--charcoal-soft);
+    padding:36px 14px;
   }
 
   .speaker-label{
@@ -101,18 +239,14 @@
     text-transform:uppercase;
     color:var(--rose);
     font-weight:600;
-    position:relative;
-    z-index:2;
   }
   .speaker-name{
     font-family:'Cormorant Garamond',serif;
     font-weight:600;
-    font-size:clamp(32px,5.2vw,68px);
+    font-size:clamp(30px,4.6vw,60px);
     margin:0;
     line-height:1.05;
     color:var(--charcoal);
-    position:relative;
-    z-index:2;
   }
   .target-row{
     display:flex;
@@ -120,8 +254,6 @@
     justify-content:center;
     gap:0.6ch;
     margin:0.3vh 0 0.4vh;
-    position:relative;
-    z-index:2;
   }
   .target-tag{
     font-size:clamp(11px,1vw,14px);
@@ -133,20 +265,19 @@
   .target-value{
     font-family:'Cormorant Garamond',serif;
     font-weight:700;
-    font-size:clamp(30px,4vw,50px);
+    font-size:clamp(26px,3.4vw,42px);
     color:var(--gold);
     font-variant-numeric:tabular-nums;
     line-height:1;
   }
   .timer-ring-wrap{
     position:relative;
-    width:min(42vh,42vw,480px);
-    height:min(42vh,42vw,480px);
+    width:min(36vh,26vw,400px);
+    height:min(36vh,26vw,400px);
     display:flex;
     align-items:center;
     justify-content:center;
     margin:0.6vh 0;
-    z-index:2;
   }
   .timer-ring-wrap.glitch-shake{
     animation: shakeJitter 0.28s infinite;
@@ -204,12 +335,11 @@
   .timer{
     font-family:'Cormorant Garamond',serif;
     font-weight:700;
-    font-size:clamp(56px,8vw,112px);
+    font-size:clamp(48px,6.6vw,96px);
     color:var(--charcoal);
     font-variant-numeric:tabular-nums;
     transition:color 0.4s ease;
     position:relative;
-    z-index:2;
   }
   .timer.warning{color:var(--amber);}
   .timer.over{color:var(--red);}
@@ -228,8 +358,6 @@
     color:var(--charcoal-soft);
     min-height:20px;
     font-weight:600;
-    position:relative;
-    z-index:2;
   }
   .delta.over{color:var(--red);}
 
@@ -243,8 +371,6 @@
     opacity:0;
     transform:skewX(0deg);
     min-height:16px;
-    position:relative;
-    z-index:2;
   }
   .glitch-caption.show{
     opacity:1;
@@ -275,7 +401,7 @@
     left:0;
     top:calc(-1 * var(--orbit-r, 200px));
     transform: translate(-50%,-50%);
-    font-size:clamp(24px,3vw,36px);
+    font-size:clamp(22px,2.6vw,32px);
     animation: counterSpin 9s linear infinite;
     filter:drop-shadow(0 2px 3px rgba(58,51,44,0.3));
   }
@@ -285,7 +411,7 @@
     position:absolute;
     top:2%;
     right:6%;
-    font-size:clamp(26px,3.4vw,40px);
+    font-size:clamp(24px,3vw,36px);
     animation: yawnBounce 1.5s ease-in-out infinite;
   }
   @keyframes yawnBounce{
@@ -295,15 +421,13 @@
 
   .status-bar-wrap{
     width:100%;
-    max-width:760px;
+    max-width:620px;
     margin-top:1.2vh;
-    position:relative;
-    z-index:2;
   }
   .status-bar-track{
     position:relative;
     width:100%;
-    height:clamp(16px,2vh,26px);
+    height:clamp(14px,1.8vh,22px);
     background:var(--cream);
     border-radius:20px;
     overflow:hidden;
@@ -406,6 +530,74 @@
     transform:translate(-50%,0);
   }
 
+  /* RESULTATSCENE (full-bredde ledertavle) */
+  .scene-finished{
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    gap:1.2vh;
+    opacity:0;
+    transform:scale(0.94);
+    transition: opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s;
+  }
+  #app[data-scene="finished"] .scene-finished{
+    opacity:1;
+    transform:scale(1);
+  }
+  .finished-heading{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:clamp(38px,5.4vw,80px);
+    color:var(--charcoal);
+  }
+  .finished-sub{
+    font-size:clamp(14px,1.4vw,20px);
+    color:var(--charcoal-soft);
+    letter-spacing:0.05em;
+    margin-bottom:0.8vh;
+  }
+  .finished-leaderboard{
+    width:100%;
+    max-width:920px;
+    background:#fff;
+    border-radius:26px;
+    padding:14px 6px;
+    box-shadow:var(--shadow);
+    max-height:62vh;
+    overflow-y:auto;
+  }
+  .finished-row{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    padding:14px 32px;
+    font-size:clamp(17px,1.9vw,26px);
+    border-bottom:1px solid var(--line);
+  }
+  .finished-row:last-child{ border-bottom:none; }
+  .finished-row .medal{ font-size:1.25em; width:1.4em; text-align:center; flex:0 0 auto; }
+  .finished-row .table-name{ flex:1; text-align:left; font-weight:700; }
+  .finished-row .table-points{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    color:var(--gold);
+    font-variant-numeric:tabular-nums;
+    flex:0 0 auto;
+  }
+  .finished-row.leader{ background:var(--cream); border-radius:16px; }
+  .finished-continue{
+    margin-top:1.4vh;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--charcoal-soft);
+    background:none;
+    border:1px solid var(--line);
+    padding:8px 18px;
+  }
+  .finished-continue:hover{ border-color:var(--gold); color:var(--gold); }
+
   .controls{
     display:flex;
     flex-wrap:wrap;
@@ -415,8 +607,7 @@
     border-top:1px solid var(--line);
     width:100%;
     max-width:760px;
-    position:relative;
-    z-index:2;
+    flex:0 0 auto;
     transition:opacity 0.3s ease;
   }
   button{
@@ -456,8 +647,7 @@
     text-align:center;
     padding-top:5px;
     letter-spacing:0.03em;
-    position:relative;
-    z-index:2;
+    flex:0 0 auto;
     transition:opacity 0.3s ease;
   }
 
@@ -572,115 +762,6 @@
     margin:-6px 0 16px;
   }
 
-  /* Results dashboard (privat kupp-gjetning fra brudeparet) */
-  .result-overlay{
-    position:fixed;inset:0;
-    z-index:60;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:rgba(58,51,44,0.6);
-  }
-  .result-overlay.hidden{display:none;}
-  .result-card{
-    position:relative;
-    z-index:2;
-    background:var(--ivory);
-    border-radius:22px;
-    padding:36px 44px;
-    width:min(620px,92vw);
-    max-height:90vh;
-    overflow-y:auto;
-    text-align:center;
-    box-shadow:var(--shadow);
-  }
-  .result-emoji{
-    font-size:56px;
-    line-height:1;
-    margin-bottom:6px;
-  }
-  .result-title{
-    font-family:'Cormorant Garamond',serif;
-    font-weight:700;
-    font-size:34px;
-    color:var(--charcoal);
-    margin-bottom:2px;
-  }
-  .result-name{
-    font-size:13px;
-    letter-spacing:0.1em;
-    text-transform:uppercase;
-    color:var(--charcoal-soft);
-    margin-bottom:22px;
-  }
-  .result-stats{
-    display:flex;
-    justify-content:center;
-    gap:36px;
-    margin-bottom:20px;
-  }
-  .stat-block .stat-label{
-    font-size:11px;
-    letter-spacing:0.1em;
-    text-transform:uppercase;
-    color:var(--charcoal-soft);
-    margin-bottom:4px;
-  }
-  .stat-block .stat-value{
-    font-family:'Cormorant Garamond',serif;
-    font-weight:700;
-    font-size:40px;
-    color:var(--gold);
-    font-variant-numeric:tabular-nums;
-  }
-  .result-gauge-wrap{
-    margin:8px auto 18px;
-    max-width:480px;
-  }
-  .result-gauge-track{
-    position:relative;
-    height:14px;
-    background:var(--cream);
-    border-radius:10px;
-    overflow:visible;
-  }
-  .result-gauge-fill{
-    position:absolute;
-    left:0;top:0;bottom:0;
-    width:0%;
-    background:var(--sage);
-    border-radius:10px;
-  }
-  .result-gauge-marker{
-    position:absolute;
-    top:50%;
-    transform:translate(-50%,-50%);
-    font-size:18px;
-  }
-  .result-gauge-marker.guess{ top:-14px; font-size:16px; }
-  .result-verdict{
-    font-size:15px;
-    color:var(--charcoal-soft);
-    font-weight:600;
-    margin-bottom:12px;
-    line-height:1.5;
-  }
-  .result-publish-note{
-    font-size:11px;
-    color:var(--sage);
-    font-weight:600;
-    margin-bottom:24px;
-  }
-  .result-actions{
-    display:flex;
-    justify-content:center;
-    gap:10px;
-  }
-  .result-actions button{
-    font-size:13px;
-    padding:10px 22px;
-  }
-
   #confettiLayer{
     position:fixed;inset:0;
     z-index:61;
@@ -705,43 +786,70 @@
 <div id="vignette"></div>
 <div id="flashOverlay"></div>
 <div id="overtimeBanner">⏰ 7 minutter er nådd!</div>
+<div id="confettiLayer"></div>
 
-<div id="app">
+<div id="app" data-scene="pause">
   <header class="brand">
     <div class="brand-names" id="coupleNamesDisplay">Karoline &amp; Peter</div>
     <div class="brand-date" id="weddingDateDisplay">4.–5. september 2026</div>
     <div class="sync-status" id="syncStatus">⏳ Kobler til Netlify...</div>
   </header>
 
-  <main class="stage" id="stage">
-    <div class="speaker-label">TALER</div>
-    <h1 class="speaker-name" id="speakerName">Legg til talere for å starte</h1>
+  <!-- PAUSESKJERM -->
+  <div class="scene scene-pause" id="scenePause">
+    <div class="pause-logo" id="pauseLogo">Karoline &amp; Peter</div>
+    <div class="pause-date" id="pauseDate">4.–5. september 2026</div>
+    <div class="pause-divider"></div>
+    <div class="pause-next" id="pauseNext"></div>
+    <div class="pause-hint">Trykk mellomrom for å starte</div>
+  </div>
 
-    <div class="target-row">
-      <span class="target-tag">🎯 Grense:</span>
-      <span class="target-value" id="targetValue">5:00–7:00</span>
-    </div>
+  <!-- LIVE-SCENE -->
+  <div class="scene scene-live" id="sceneLive">
+    <div class="live-left" id="liveLeft">
+      <div class="speaker-label">TALER</div>
+      <h1 class="speaker-name" id="speakerName">—</h1>
 
-    <div class="timer-ring-wrap" id="ringWrap">
-      <svg viewBox="0 0 120 120">
-        <circle class="ring-bg" cx="60" cy="60" r="54"/>
-        <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="54"/>
-      </svg>
-      <div class="timer" id="timerDisplay">00:00</div>
-      <div class="fx-layer" id="fxLayer"></div>
-    </div>
-    <div class="delta" id="deltaLabel">&nbsp;</div>
-    <div class="glitch-caption" id="glitchCaption">⚠️ TIDTAKINGEN FEILER...</div>
-
-    <div class="status-bar-wrap">
-      <div class="status-bar-track">
-        <div class="status-bar-fill" id="statusBarFill"></div>
-        <div class="status-bar-marker orange" id="marker5"><span class="tag">5</span></div>
-        <div class="status-bar-marker" id="marker7"><span class="flag">🏁</span></div>
+      <div class="target-row">
+        <span class="target-tag">🎯 Grense:</span>
+        <span class="target-value" id="targetValue">5:00–7:00</span>
       </div>
-      <div class="bar-labels"><span>0:00</span><span id="barMaxLabel">—</span></div>
+
+      <div class="timer-ring-wrap" id="ringWrap">
+        <svg viewBox="0 0 120 120">
+          <circle class="ring-bg" cx="60" cy="60" r="54"/>
+          <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="54"/>
+        </svg>
+        <div class="timer" id="timerDisplay">00:00</div>
+        <div class="fx-layer" id="fxLayer"></div>
+      </div>
+      <div class="delta" id="deltaLabel">&nbsp;</div>
+      <div class="glitch-caption" id="glitchCaption">⚠️ TIDTAKINGEN FEILER...</div>
+
+      <div class="status-bar-wrap">
+        <div class="status-bar-track">
+          <div class="status-bar-fill" id="statusBarFill"></div>
+          <div class="status-bar-marker orange" id="marker5"><span class="tag">5</span></div>
+          <div class="status-bar-marker" id="marker7"><span class="flag">🏁</span></div>
+        </div>
+        <div class="bar-labels"><span>0:00</span><span id="barMaxLabel">—</span></div>
+      </div>
     </div>
-  </main>
+
+    <div class="live-right">
+      <h2 class="live-right-heading">🎲 Bordenes gjetninger</h2>
+      <div class="live-right-sub" id="liveRightCount">Ingen har gjettet ennå</div>
+      <div id="liveGuessList" class="live-guess-list"></div>
+    </div>
+  </div>
+
+  <!-- RESULTATSCENE -->
+  <div class="scene scene-finished" id="sceneFinished">
+    <div class="finished-heading" id="finishedHeading">🏆 Stillingen</div>
+    <div class="finished-sub" id="finishedSub"></div>
+    <div class="finished-leaderboard" id="finishedLeaderboard"></div>
+    <button class="finished-continue" id="finishedContinueBtn">Videre (mellomrom)</button>
+  </div>
 
   <footer class="controls">
     <button id="prevBtn">‹</button>
@@ -752,7 +860,7 @@
     <button id="fullscreenBtn">⛶</button>
     <button id="editBtn">✎ Talere</button>
   </footer>
-  <div class="hint">Mellomrom = start/pause · Enter = ferdig · R = nullstill · ← → = forrige/neste taler · F = fullskjerm</div>
+  <div class="hint" id="hintText">← → = velg neste taler · Mellomrom = start · F = fullskjerm</div>
 </div>
 
 <div id="editModal" class="modal hidden">
@@ -778,7 +886,7 @@
       <input type="number" id="newSec" min="0" max="59" placeholder="sek">
       <button id="addSpeakerBtn" class="primary">Legg til</button>
     </div>
-    <div class="field-hint">min / sek = brudeparets private gjetning for denne taleren</div>
+    <div class="field-hint">min / sek = brudeparets gjetning for denne taleren</div>
 
     <div class="modal-actions">
       <div class="left-actions">
@@ -787,41 +895,9 @@
       </div>
       <button id="closeModalBtn" class="primary">Lagre &amp; lukk</button>
     </div>
-    <div class="field-hint" style="text-align:left;margin-top:8px;">«Nullstill alt» sletter talerlisten, resultater og alle gjestenes gjetninger permanent — kun til bruk under testing.</div>
+    <div class="field-hint" style="text-align:left;margin-top:8px;">«Nullstill alt» sletter talerlisten, resultater og alle bords gjetninger permanent — kun til bruk under testing.</div>
   </div>
 </div>
-
-<div id="resultOverlay" class="result-overlay hidden">
-  <div class="result-card">
-    <div class="result-emoji" id="resultEmoji">🎉</div>
-    <div class="result-title" id="resultTitle">Innenfor tiden!</div>
-    <div class="result-name" id="resultSpeakerName">—</div>
-    <div class="result-stats">
-      <div class="stat-block">
-        <div class="stat-label">Faktisk taletid</div>
-        <div class="stat-value" id="resultActual">00:00</div>
-      </div>
-      <div class="stat-block">
-        <div class="stat-label">Brudeparets gjetning</div>
-        <div class="stat-value" id="resultGuess">—</div>
-      </div>
-    </div>
-    <div class="result-gauge-wrap" id="resultGaugeWrap">
-      <div class="result-gauge-track">
-        <div class="result-gauge-fill" id="resultGaugeFill"></div>
-        <div class="result-gauge-marker guess" id="gaugeGuessMarker">🎯</div>
-        <div class="result-gauge-marker actual" id="gaugeActualMarker">📍</div>
-      </div>
-    </div>
-    <div class="result-verdict" id="resultVerdict"></div>
-    <div class="result-publish-note" id="resultPublishNote">Publiserer resultatet til gjestenes side...</div>
-    <div class="result-actions">
-      <button id="resultCloseBtn">Lukk</button>
-      <button id="resultNextBtn" class="primary">Neste taler ›</button>
-    </div>
-  </div>
-</div>
-<div id="confettiLayer"></div>
 
 <script>
 (function(){
@@ -845,7 +921,6 @@
     {name:'Forlover (brud)', min:4, sec:0},
     {name:'Forlover (brudgom)', min:4, sec:0}
   ];
-  // Migrering: sørg for at alle talere har id / finished / actualSeconds
   speakers.forEach(sp => {
     if(!sp.id) sp.id = genId();
     if(sp.finished === undefined) sp.finished = false;
@@ -862,6 +937,10 @@
   let overtimeStage = 0; // 0 none, 1 turtle, 2 turtle+yawn, 3 glitch
   let bannerHideTimer = null;
 
+  let scene = 'pause'; // 'pause' | 'live' | 'finished'
+  let guessesData = {};
+  let confettiInterval = null;
+
   const speakerNameEl = document.getElementById('speakerName');
   const targetValue = document.getElementById('targetValue');
   const timerDisplay = document.getElementById('timerDisplay');
@@ -877,6 +956,19 @@
   const flashOverlay = document.getElementById('flashOverlay');
   const overtimeBanner = document.getElementById('overtimeBanner');
   const syncStatus = document.getElementById('syncStatus');
+  const appEl = document.getElementById('app');
+  const liveLeft = document.getElementById('liveLeft');
+  const liveGuessList = document.getElementById('liveGuessList');
+  const liveRightCount = document.getElementById('liveRightCount');
+  const pauseLogo = document.getElementById('pauseLogo');
+  const pauseDate = document.getElementById('pauseDate');
+  const pauseNext = document.getElementById('pauseNext');
+  const finishedHeading = document.getElementById('finishedHeading');
+  const finishedSub = document.getElementById('finishedSub');
+  const finishedLeaderboard = document.getElementById('finishedLeaderboard');
+  const finishedContinueBtn = document.getElementById('finishedContinueBtn');
+  const hintText = document.getElementById('hintText');
+
   const startBtn = document.getElementById('startBtn');
   const finishBtn = document.getElementById('finishBtn');
   const resetBtn = document.getElementById('resetBtn');
@@ -898,21 +990,6 @@
   const adminKeyInput = document.getElementById('adminKeyInput');
   const coupleNamesDisplay = document.getElementById('coupleNamesDisplay');
   const weddingDateDisplay = document.getElementById('weddingDateDisplay');
-
-  const resultOverlay = document.getElementById('resultOverlay');
-  const resultEmoji = document.getElementById('resultEmoji');
-  const resultTitle = document.getElementById('resultTitle');
-  const resultSpeakerName = document.getElementById('resultSpeakerName');
-  const resultActual = document.getElementById('resultActual');
-  const resultGuess = document.getElementById('resultGuess');
-  const resultGaugeWrap = document.getElementById('resultGaugeWrap');
-  const resultGaugeFill = document.getElementById('resultGaugeFill');
-  const gaugeGuessMarker = document.getElementById('gaugeGuessMarker');
-  const gaugeActualMarker = document.getElementById('gaugeActualMarker');
-  const resultVerdict = document.getElementById('resultVerdict');
-  const resultPublishNote = document.getElementById('resultPublishNote');
-  const resultCloseBtn = document.getElementById('resultCloseBtn');
-  const resultNextBtn = document.getElementById('resultNextBtn');
   const confettiLayer = document.getElementById('confettiLayer');
 
   const RADIUS = 54;
@@ -927,12 +1004,22 @@
     const r = s%60;
     return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0');
   }
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str == null ? '' : str;
+    return d.innerHTML;
+  }
 
   function saveSpeakers(){ localStorage.setItem(LS_SPEAKERS, JSON.stringify(speakers)); }
   function saveBrand(){
     localStorage.setItem(LS_COUPLE, coupleNamesInput.value);
     localStorage.setItem(LS_DATE, weddingDateInput.value);
     localStorage.setItem(LS_ADMIN_KEY, adminKeyInput.value);
+  }
+
+  function syncPauseBrand(){
+    pauseLogo.textContent = coupleNamesDisplay.textContent;
+    pauseDate.textContent = weddingDateDisplay.textContent;
   }
 
   function loadBrand(){
@@ -944,6 +1031,7 @@
     if(d){ weddingDateDisplay.textContent = d; weddingDateInput.value = d; }
     else { weddingDateInput.value = weddingDateDisplay.textContent; }
     if(k){ adminKeyInput.value = k; }
+    syncPauseBrand();
   }
 
   // ---------- Backend-sync (Netlify Functions + Blobs) ----------
@@ -971,7 +1059,10 @@
     return data;
   }
 
-  function setSyncStatus(text){ syncStatus.textContent = text; }
+  function setSyncStatus(text){
+    syncStatus.textContent = text;
+    syncStatus.classList.toggle('error', text.indexOf('🔴') === 0);
+  }
 
   async function syncFromServer(){
     try{
@@ -984,6 +1075,7 @@
         weddingDateDisplay.textContent = server.weddingDate;
         weddingDateInput.value = server.weddingDate;
       }
+      syncPauseBrand();
       if(Array.isArray(server.speakers) && server.speakers.length > 0){
         const byId = {};
         speakers.forEach(sp => { byId[sp.id] = sp; });
@@ -994,8 +1086,6 @@
             const local = byId[srv.id];
             let min = local ? local.min : 0;
             let sec = local ? local.sec : 0;
-            // Om denne nettleseren ikke har en privat gjetning lagret ennå, men serveren
-            // har en (satt fra en annen enhet), bruk den i stedet for 0:00.
             if(!min && !sec && srv.coupleGuessSeconds != null){
               min = Math.floor(srv.coupleGuessSeconds/60);
               sec = srv.coupleGuessSeconds % 60;
@@ -1009,7 +1099,6 @@
               actualSeconds: srv.actualSeconds != null ? srv.actualSeconds : null
             };
           });
-        // Behold lokale talere som ennå ikke er lagret på serveren
         speakers.forEach(sp => {
           if(!server.speakers.find(s => s.id === sp.id)) merged.push(sp);
         });
@@ -1042,10 +1131,87 @@
       setSyncStatus('🟢 Lagret og publisert til gjestenes side');
       return true;
     }catch(e){
-      if(e.status === 401) setSyncStatus('🔴 Feil admin-nøkkel — endringer ble ikke publisert');
-      else setSyncStatus('🟡 Kunne ikke publisere (sjekk internett) — lagret lokalt');
+      if(e.status === 401) setSyncStatus('🔴 Feil admin-nøkkel — endringer ble IKKE publisert til gjestene!');
+      else setSyncStatus('🟡 Kunne ikke publisere (sjekk internett) — lagret kun lokalt');
       return false;
     }
+  }
+
+  // Publiserer automatisk til serveren litt etter at man har gjort en endring i talerlisten,
+  // slik at man ALDRI trenger å huske å trykke «Lagre» for at gjestenes side skal oppdateres.
+  let autoPushTimer = null;
+  function scheduleAutoPush(){
+    setSyncStatus('⏳ Publiserer endring...');
+    if(autoPushTimer) clearTimeout(autoPushTimer);
+    autoPushTimer = setTimeout(() => { pushStateToServer(); }, 1000);
+  }
+
+  async function pollGuesses(){
+    try{
+      const g = await apiGet('/api/guess');
+      guessesData = g.guesses || {};
+    }catch(e){ /* behold sist kjente data */ }
+    renderLiveGuesses();
+  }
+
+  function guessListForSpeaker(speakerId){
+    const list = [];
+    Object.keys(guessesData).forEach(key => {
+      const rec = guessesData[key];
+      if(rec.entries && rec.entries[speakerId] != null){
+        list.push({ key, name: rec.name, guess: rec.entries[speakerId] });
+      }
+    });
+    return list;
+  }
+
+  function renderLiveGuesses(){
+    const sp = currentSpeaker();
+    if(!sp){ liveGuessList.innerHTML = ''; liveRightCount.textContent = ''; return; }
+    const guesses = guessListForSpeaker(sp.id).slice().sort((a,b)=>a.guess-b.guess);
+    liveRightCount.textContent = guesses.length === 0
+      ? 'Ingen bord har gjettet ennå'
+      : guesses.length + (guesses.length===1 ? ' bord har gjettet' : ' bord har gjettet');
+    if(guesses.length === 0){
+      liveGuessList.innerHTML = '<div class="live-empty">Venter på gjetninger...</div>';
+      return;
+    }
+    liveGuessList.innerHTML = guesses.map(g =>
+      '<div class="live-guess-row"><span class="table-name">'+escapeHtml(g.name)+'</span><span class="table-guess">'+fmt(g.guess)+'</span></div>'
+    ).join('');
+  }
+
+  function computeLeaderboard(){
+    const totals = {};
+    speakers.filter(s => s.finished && s.actualSeconds != null).forEach(sp => {
+      const guesses = guessListForSpeaker(sp.id).map(g => {
+        const diff = Math.abs(g.guess - sp.actualSeconds);
+        return { ...g, diff, pts: Math.max(0, Math.round(50 - diff/6)) };
+      });
+      const minDiff = guesses.length ? Math.min(...guesses.map(g => g.diff)) : null;
+      guesses.forEach(g => {
+        const bonus = g.diff === minDiff ? 10 : 0;
+        totals[g.key] = totals[g.key] || { name: g.name, points: 0 };
+        totals[g.key].points += g.pts + bonus;
+      });
+    });
+    return Object.values(totals).sort((a,b) => b.points - a.points);
+  }
+
+  function renderFinishedLeaderboard(){
+    const rows = computeLeaderboard();
+    const allDone = speakers.length > 0 && speakers.every(s => s.finished);
+    finishedHeading.textContent = allDone ? '🏆 Vinneren er kåret!' : '🏆 Stillingen så langt';
+    if(rows.length === 0){
+      finishedSub.textContent = 'Ingen gjetninger å vise ennå';
+      finishedLeaderboard.innerHTML = '<div class="live-empty">Ingen resultater ennå</div>';
+      return;
+    }
+    finishedSub.textContent = allDone ? ('Gratulerer, ' + rows[0].name + '!') : (rows[0].name + ' leder foreløpig');
+    const medals = ['🥇','🥈','🥉'];
+    finishedLeaderboard.innerHTML = rows.map((r,i) =>
+      '<div class="finished-row'+(i===0?' leader':'')+'"><span class="medal">'+(medals[i]||('#'+(i+1)))+'</span><span class="table-name">'+escapeHtml(r.name)+'</span><span class="table-points">'+r.points+' p</span></div>'
+    ).join('');
   }
 
   function currentSpeaker(){ return speakers[currentIndex] || null; }
@@ -1060,16 +1226,12 @@
       running = false;
     }
     stopTick();
-    startBtn.textContent = 'Start';
-    startBtn.classList.remove('stop');
   }
 
   function startTimer(){
     if(!currentSpeaker()) return;
     running = true;
     startTs = Date.now();
-    startBtn.textContent = 'Pause';
-    startBtn.classList.add('stop');
     stopTick();
     tickHandle = setInterval(render, 100);
     render();
@@ -1123,6 +1285,7 @@
   }
 
   function resetTimer(){
+    if(scene !== 'live') return;
     pauseTimer();
     elapsedMs = 0;
     resetOvertimeState();
@@ -1136,12 +1299,14 @@
   }
 
   function selectSpeaker(idx){
+    if(scene !== 'pause') return;
     if(idx < 0 || idx >= speakers.length) return;
     pauseTimer();
     elapsedMs = 0;
     currentIndex = idx;
     resetOvertimeState();
-    render();
+    updatePauseNext();
+    syncControlsForScene();
   }
 
   function showBanner(text){
@@ -1165,21 +1330,16 @@
   function render(){
     const sp = currentSpeaker();
     if(!sp){
-      speakerNameEl.textContent = 'Legg til talere for å starte';
+      speakerNameEl.textContent = '—';
       timerDisplay.textContent = '00:00';
       deltaLabel.innerHTML = '&nbsp;';
       ringFg.style.strokeDashoffset = CIRC;
       statusBarFill.style.width = '0%';
       barMaxLabel.textContent = '—';
-      startBtn.disabled = true; resetBtn.disabled = true; finishBtn.disabled = true;
-      prevBtn.disabled = true; nextBtn.disabled = true;
       document.body.classList.remove('state-warning','state-over');
       setOvertimeStage(0);
       return;
     }
-    startBtn.disabled = false; resetBtn.disabled = false; finishBtn.disabled = false;
-    prevBtn.disabled = currentIndex === 0;
-    nextBtn.disabled = currentIndex === speakers.length - 1;
 
     const elapsed = getElapsedSec();
 
@@ -1249,66 +1409,82 @@
     ringFg.style.strokeDashoffset = CIRC * (1 - ratioForRing);
   }
 
-  function finishSpeech(){
+  // ---------- Scenestyring ----------
+  function setScene(next){
+    scene = next;
+    appEl.setAttribute('data-scene', next);
+    syncControlsForScene();
+    updateHint();
+  }
+
+  function syncControlsForScene(){
+    const sp = currentSpeaker();
+    if(scene === 'pause'){
+      startBtn.disabled = !sp;
+      finishBtn.disabled = true;
+      resetBtn.disabled = true;
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = !sp || currentIndex === speakers.length - 1;
+    } else if(scene === 'live'){
+      startBtn.disabled = false;
+      finishBtn.disabled = false;
+      resetBtn.disabled = false;
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+    } else {
+      startBtn.disabled = true;
+      finishBtn.disabled = true;
+      resetBtn.disabled = true;
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+    }
+  }
+
+  function updateHint(){
+    if(scene === 'pause') hintText.textContent = '← → = velg neste taler · Mellomrom = start talen · F = fullskjerm · E = rediger talere';
+    else if(scene === 'live') hintText.textContent = 'Mellomrom = pause/fortsett · Enter = ferdig · R = nullstill · F = fullskjerm';
+    else hintText.textContent = 'Mellomrom = tilbake til pauseskjerm';
+  }
+
+  function updatePauseNext(){
+    const sp = currentSpeaker();
+    pauseNext.innerHTML = sp ? ('Neste ut: <b>' + escapeHtml(sp.name || 'Uten navn') + '</b>') : 'Ingen talere lagt inn ennå';
+  }
+
+  function startFromPause(){
     if(!currentSpeaker()) return;
-    if(!resultOverlay.classList.contains('hidden')) return;
+    setScene('live');
+    renderLiveGuesses();
+    startTimer();
+  }
+
+  function finishSpeech(){
+    if(scene !== 'live') return;
+    if(!currentSpeaker()) return;
     pauseTimer();
     const finalElapsed = getElapsedSec();
     const sp = currentSpeaker();
     sp.finished = true;
     sp.actualSeconds = Math.round(finalElapsed);
     saveSpeakers();
-    showResult(finalElapsed, sp);
-    resultPublishNote.textContent = 'Publiserer resultatet til gjestenes side...';
-    pushStateToServer().then(ok => {
-      resultPublishNote.textContent = ok
-        ? '✅ Resultatet er publisert til gjestenes gjettekonkurranse'
-        : '⚠️ Kunne ikke publisere — sjekk admin-nøkkel/internett og trykk «Hent fra server» / «Lagre» senere';
-    });
+    pushStateToServer().then(() => { pollGuesses(); renderFinishedLeaderboard(); });
+    flyOutAndShowLeaderboard();
   }
 
-  function showResult(finalElapsed, sp){
-    const guess = plannedSeconds(sp);
-    const withinLimit = finalElapsed <= RED_AT;
-
-    resultEmoji.textContent = withinLimit ? '🎉' : '🐢';
-    resultTitle.textContent = withinLimit ? 'Innenfor tiden!' : 'Over grensen...';
-    resultSpeakerName.textContent = sp.name || 'Uten navn';
-    resultActual.textContent = fmt(finalElapsed);
-
-    if(guess > 0){
-      resultGuess.textContent = fmt(guess);
-      resultGaugeWrap.style.display = '';
-      const diff = finalElapsed - guess;
-      const absDiff = Math.abs(diff);
-      let emoji, text;
-      if(absDiff <= 15){ emoji='🎯'; text='Blink! Brudeparet gjettet nesten perfekt.'; }
-      else if(absDiff <= 45){ emoji='👏'; text='Nære nok — godt gjettet av brudeparet!'; }
-      else if(absDiff <= 90){ emoji='😅'; text='Bommet litt på brudeparet.'; }
-      else { emoji='🤷'; text='Bommet stort — helt ute å kjøre!'; }
-      resultVerdict.innerHTML = emoji + ' ' + text + '<br>' + (diff>=0?'+':'−') + fmt(absDiff) + ' fra gjetningen';
-
-      const scale = Math.max(finalElapsed, guess, 60) * 1.25;
-      const actualPct = Math.min(finalElapsed/scale, 1) * 100;
-      const guessPct = Math.min(guess/scale, 1) * 100;
-      resultGaugeFill.style.width = actualPct + '%';
-      gaugeActualMarker.style.left = actualPct + '%';
-      gaugeGuessMarker.style.left = guessPct + '%';
-    } else {
-      resultGuess.textContent = 'Ikke gjettet';
-      resultGaugeWrap.style.display = 'none';
-      resultVerdict.textContent = 'Ingen privat gjetning registrert for denne taleren.';
-    }
-
-    resultOverlay.classList.remove('hidden');
-    if(withinLimit){ launchConfetti(); }
+  function flyOutAndShowLeaderboard(){
+    liveLeft.classList.add('fly-out');
+    renderFinishedLeaderboard();
+    setTimeout(() => {
+      setScene('finished');
+      liveLeft.classList.remove('fly-out');
+      startConfettiLoop();
+    }, 650);
   }
 
-  function launchConfetti(){
-    confettiLayer.innerHTML = '';
+  function launchConfettiBurst(count){
     const colors = ['#b8935a','#c98e86','#8a9a7e','#c99a4b','#f2e9dc','#d9bd8c'];
-    const count = 90;
-    for(let i=0;i<count;i++){
+    const n = count || 70;
+    for(let i=0;i<n;i++){
       const p = document.createElement('div');
       p.className = 'confetti-piece';
       const size = 6 + Math.random()*8;
@@ -1326,10 +1502,21 @@
       setTimeout(() => { p.remove(); }, (duration+delay)*1000 + 200);
     }
   }
-
-  function closeResult(){
-    resultOverlay.classList.add('hidden');
+  function startConfettiLoop(){
+    stopConfettiLoop();
+    launchConfettiBurst(70);
+    confettiInterval = setInterval(() => launchConfettiBurst(60), 1500);
+  }
+  function stopConfettiLoop(){
+    if(confettiInterval){ clearInterval(confettiInterval); confettiInterval = null; }
     confettiLayer.innerHTML = '';
+  }
+
+  function goToPause(){
+    if(scene !== 'finished') return;
+    stopConfettiLoop();
+    setScene('pause');
+    updatePauseNext();
   }
 
   function renderEditor(){
@@ -1341,19 +1528,19 @@
       const nameInput = document.createElement('input');
       nameInput.type = 'text';
       nameInput.value = sp.name;
-      nameInput.addEventListener('input', () => { sp.name = nameInput.value; saveSpeakers(); if(i===currentIndex) render(); });
+      nameInput.addEventListener('input', () => { sp.name = nameInput.value; saveSpeakers(); if(i===currentIndex){ updatePauseNext(); } scheduleAutoPush(); });
 
       const minInput = document.createElement('input');
       minInput.type = 'number'; minInput.min = 0; minInput.value = sp.min;
-      minInput.title = 'minutter (privat gjetning)';
-      minInput.addEventListener('input', () => { sp.min = parseInt(minInput.value)||0; saveSpeakers(); });
+      minInput.title = 'minutter (gjetning)';
+      minInput.addEventListener('input', () => { sp.min = parseInt(minInput.value)||0; saveSpeakers(); scheduleAutoPush(); });
 
       const sepSpan = document.createElement('span'); sepSpan.textContent = ':'; sepSpan.style.color='var(--charcoal-soft)';
 
       const secInput = document.createElement('input');
       secInput.type = 'number'; secInput.min = 0; secInput.max = 59; secInput.value = sp.sec;
-      secInput.title = 'sekunder (privat gjetning)';
-      secInput.addEventListener('input', () => { sp.sec = Math.min(59, parseInt(secInput.value)||0); saveSpeakers(); });
+      secInput.title = 'sekunder (gjetning)';
+      secInput.addEventListener('input', () => { sp.sec = Math.min(59, parseInt(secInput.value)||0); saveSpeakers(); scheduleAutoPush(); });
 
       const statusSpan = document.createElement('span');
       statusSpan.style.fontSize = '11px';
@@ -1367,7 +1554,7 @@
       upBtn.addEventListener('click', () => {
         [speakers[i-1], speakers[i]] = [speakers[i], speakers[i-1]];
         if(currentIndex===i) currentIndex=i-1; else if(currentIndex===i-1) currentIndex=i;
-        saveSpeakers(); renderEditor(); render();
+        saveSpeakers(); renderEditor(); updatePauseNext(); syncControlsForScene(); pushStateToServer();
       });
 
       const downBtn = document.createElement('button');
@@ -1376,7 +1563,7 @@
       downBtn.addEventListener('click', () => {
         [speakers[i+1], speakers[i]] = [speakers[i], speakers[i+1]];
         if(currentIndex===i) currentIndex=i+1; else if(currentIndex===i+1) currentIndex=i;
-        saveSpeakers(); renderEditor(); render();
+        saveSpeakers(); renderEditor(); updatePauseNext(); syncControlsForScene(); pushStateToServer();
       });
 
       const delBtn = document.createElement('button');
@@ -1385,7 +1572,7 @@
         speakers.splice(i,1);
         if(currentIndex >= speakers.length) currentIndex = Math.max(0, speakers.length-1);
         pauseTimer(); elapsedMs = 0; resetOvertimeState();
-        saveSpeakers(); renderEditor(); render();
+        saveSpeakers(); renderEditor(); updatePauseNext(); syncControlsForScene(); pushStateToServer();
       });
 
       row.append(nameInput, minInput, sepSpan, secInput, statusSpan, upBtn, downBtn, delBtn);
@@ -1411,7 +1598,7 @@
       actualSeconds: null
     });
     newName.value=''; newMin.value=''; newSec.value='';
-    saveSpeakers(); renderEditor(); render();
+    saveSpeakers(); renderEditor(); updatePauseNext(); syncControlsForScene(); pushStateToServer();
     newName.focus();
   });
 
@@ -1419,13 +1606,15 @@
     el.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); addSpeakerBtn.click(); } });
   });
 
-  startBtn.addEventListener('click', toggleTimer);
+  startBtn.addEventListener('click', () => {
+    if(scene === 'pause') startFromPause();
+    else if(scene === 'live') toggleTimer();
+  });
   finishBtn.addEventListener('click', finishSpeech);
   resetBtn.addEventListener('click', resetTimer);
   prevBtn.addEventListener('click', () => selectSpeaker(currentIndex-1));
   nextBtn.addEventListener('click', () => selectSpeaker(currentIndex+1));
-  resultCloseBtn.addEventListener('click', closeResult);
-  resultNextBtn.addEventListener('click', () => { closeResult(); selectSpeaker(currentIndex+1); });
+  finishedContinueBtn.addEventListener('click', goToPause);
 
   fullscreenBtn.addEventListener('click', () => {
     if(!document.fullscreenElement){ document.documentElement.requestFullscreen().catch(()=>{}); }
@@ -1448,12 +1637,13 @@
     pullBtn.textContent = 'Henter...';
     await syncFromServer();
     renderEditor();
-    render();
+    updatePauseNext();
+    syncControlsForScene();
     pullBtn.disabled = false;
     pullBtn.textContent = '🔄 Hent fra server';
   });
   resetAllBtn.addEventListener('click', async () => {
-    const sure = confirm('Dette sletter ALLE talere, resultater og gjestenes gjetninger permanent — både her og på gjestenes side. Er du sikker?');
+    const sure = confirm('Dette sletter ALLE talere, resultater og alle bords gjetninger permanent — både her og på gjestenes side. Er du sikker?');
     if(!sure) return;
     const sureAgain = confirm('Helt sikker? Dette kan ikke angres.');
     if(!sureAgain) return;
@@ -1473,8 +1663,10 @@
       coupleNamesInput.value = coupleNamesDisplay.textContent;
       weddingDateInput.value = weddingDateDisplay.textContent;
       saveBrand();
+      syncPauseBrand();
       renderEditor();
-      render();
+      updatePauseNext();
+      syncControlsForScene();
       setSyncStatus('🟢 Alt er nullstilt — både lokalt og på Netlify');
     }catch(e){
       setSyncStatus(e.status === 401 ? '🔴 Feil admin-nøkkel — fikk ikke nullstilt serveren' : '🟡 Kunne ikke nå serveren — prøv igjen');
@@ -1486,32 +1678,44 @@
     saveBrand();
     coupleNamesDisplay.textContent = coupleNamesInput.value || 'Karoline & Peter';
     weddingDateDisplay.textContent = weddingDateInput.value || '';
+    syncPauseBrand();
     editModal.classList.add('hidden');
     await pushStateToServer();
   });
 
   document.addEventListener('keydown', (e) => {
     if(!editModal.classList.contains('hidden')) return;
-    if(!resultOverlay.classList.contains('hidden')){
-      if(e.key === 'Enter' || e.key === 'ArrowRight'){ e.preventDefault(); resultNextBtn.click(); }
-      else if(e.key === 'Escape' || e.key === 'c' || e.key === 'C'){ closeResult(); }
+
+    if(e.code === 'Space'){
+      e.preventDefault();
+      if(scene === 'pause') startFromPause();
+      else if(scene === 'live') toggleTimer();
+      else if(scene === 'finished') goToPause();
       return;
     }
-    if(e.code === 'Space'){ e.preventDefault(); toggleTimer(); }
-    else if(e.key === 'Enter'){ e.preventDefault(); finishSpeech(); }
-    else if(e.key === 'r' || e.key === 'R'){ resetTimer(); }
-    else if(e.key === 'ArrowLeft'){ selectSpeaker(currentIndex-1); }
-    else if(e.key === 'ArrowRight'){ selectSpeaker(currentIndex+1); }
-    else if(e.key === 'f' || e.key === 'F'){ fullscreenBtn.click(); }
+    if(scene === 'live'){
+      if(e.key === 'Enter'){ e.preventDefault(); finishSpeech(); }
+      else if(e.key === 'r' || e.key === 'R'){ resetTimer(); }
+    }
+    if(scene === 'pause'){
+      if(e.key === 'ArrowLeft'){ selectSpeaker(currentIndex-1); }
+      else if(e.key === 'ArrowRight'){ selectSpeaker(currentIndex+1); }
+    }
+    if(e.key === 'f' || e.key === 'F'){ fullscreenBtn.click(); }
     else if(e.key === 'e' || e.key === 'E'){ editBtn.click(); }
   });
 
   (async function init(){
     loadBrand();
-    render();
+    setScene('pause');
+    updatePauseNext();
     await syncFromServer();
-    render();
+    renderEditor();
+    updatePauseNext();
+    syncControlsForScene();
     if(speakers.length === 0){ editModal.classList.remove('hidden'); renderEditor(); }
+    pollGuesses();
+    setInterval(pollGuesses, 5000);
   })();
 })();
 </script>
