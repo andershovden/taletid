@@ -7,68 +7,239 @@
 <link rel="stylesheet" href="/assets/theme.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-  body{ background:var(--ivory); }
+  html,body{ background:#e9e2d3; }
+
+  /* ---------- Verktøylinje (skjules ved utskrift) ---------- */
   .toolbar{
-    max-width:900px;
+    max-width:700px;
     margin:0 auto;
-    padding:20px 20px 0;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
+    padding:24px 20px 10px;
   }
+  .toolbar .row{
+    display:flex;
+    gap:12px;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+  .toolbar .field{ flex:0 0 auto; }
+  .toolbar .field.grow{ flex:1 1 260px; }
+  .toolbar input[type=number]{ width:90px; }
+  .toolbar textarea{
+    font-family:'Montserrat',sans-serif;
+    font-size:13px;
+    width:100%;
+    min-height:130px;
+    padding:11px 13px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--charcoal);
+    resize:vertical;
+  }
+  .toolbar textarea:focus{ outline:none; border-color:var(--gold); }
   .toolbar .url{
     font-size:12px;
     color:var(--charcoal-soft);
     word-break:break-all;
+    margin-bottom:14px;
   }
+  .toolbar .actions{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .toolbar .hint{
+    font-size:11px;
+    color:var(--charcoal-soft);
+    margin-top:10px;
+    line-height:1.5;
+  }
+
+  /* ---------- A4-arkene ---------- */
   .sheet{
     max-width:900px;
     margin:20px auto 60px;
     padding:0 20px;
-    display:grid;
-    grid-template-columns:repeat(2, 1fr);
-    gap:18px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:26px;
   }
-  .qr-card{
+  .qr-page{
+    width:210mm;
+    height:297mm;
+    max-width:100%;
+    aspect-ratio:210/297;
     background:#fff;
     border:1px solid var(--line);
-    border-radius:18px;
-    padding:26px 20px;
-    text-align:center;
     box-shadow:var(--shadow);
-  }
-  .qr-card .brand-names{ font-size:22px; }
-  .qr-card .qr-box{
+    box-sizing:border-box;
+    padding:20mm 16mm;
     display:flex;
-    justify-content:center;
-    margin:16px 0;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    text-align:center;
+    position:relative;
   }
-  .qr-card .caption{
-    font-size:14px;
+  .qr-page .frame{
+    position:absolute;
+    inset:8mm;
+    border:1px solid var(--line);
+    pointer-events:none;
+  }
+
+  .qr-page .top{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4mm;
+  }
+  .qr-page .brand-names{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
     font-weight:600;
-    color:var(--charcoal);
-    margin-top:6px;
+    font-size:clamp(30px,5.4vw,46px);
+    color:var(--gold);
+    letter-spacing:0.05em;
+    line-height:1.1;
   }
-  .qr-card .instructions{
+  .qr-page .brand-date{
     font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.28em;
     color:var(--charcoal-soft);
-    margin-top:4px;
+  }
+  .qr-page .divider{
+    width:60px;
+    height:1px;
+    background:var(--gold);
+    opacity:0.6;
+    margin:5mm 0 0;
+  }
+  .qr-page .heading{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:clamp(24px,3.6vw,32px);
+    color:var(--charcoal);
+    margin-top:5mm;
+  }
+  .qr-page .lead{
+    font-size:13px;
+    color:var(--charcoal-soft);
+    line-height:1.6;
+    max-width:400px;
+    margin-top:3mm;
+  }
+
+  .qr-page .middle{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:5mm;
+  }
+  .qr-page .table-tag{
+    display:inline-block;
+    background:var(--cream);
+    color:var(--gold);
+    border:1px solid var(--gold-light);
+    border-radius:30px;
+    padding:6px 26px;
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:20px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+  }
+  .qr-page .qr-box{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:14px;
+    box-shadow:var(--shadow);
+    display:flex;
+  }
+  .qr-page .qr-box canvas,
+  .qr-page .qr-box img{
+    display:block;
+    width:56mm;
+    height:56mm;
+  }
+  .qr-page .url-fallback{
+    font-size:12px;
+    color:var(--charcoal-soft);
     letter-spacing:0.03em;
   }
+
+  .qr-page .bottom{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3mm;
+    max-width:420px;
+  }
+  .qr-page .responsibility{
+    font-size:12.5px;
+    color:var(--charcoal);
+    background:var(--cream);
+    border-radius:12px;
+    padding:10px 16px;
+    line-height:1.55;
+  }
+  .qr-page .responsibility b{ color:var(--gold); }
+  .qr-page .footer-note{
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--charcoal-soft);
+    opacity:0.8;
+  }
+
   @media print{
+    html,body{ background:#fff; }
     .toolbar{ display:none; }
-    .sheet{ margin:0; padding:0; gap:10px; }
-    .qr-card{ box-shadow:none; border:1px dashed var(--line); break-inside:avoid; }
-    body{ background:#fff; }
+    .sheet{ margin:0; padding:0; gap:0; }
+    .qr-page{
+      width:210mm;
+      height:297mm;
+      box-shadow:none;
+      border:none;
+      page-break-after:always;
+    }
+    .qr-page:last-child{ page-break-after:auto; }
+  }
+  @page{
+    size:A4;
+    margin:0;
   }
 </style>
 </head>
 <body>
   <div class="toolbar">
+    <div class="row">
+      <div class="field">
+        <label for="tableCount">Antall bord</label>
+        <input type="number" id="tableCount" min="1" max="60" value="10">
+      </div>
+      <div class="field">
+        <button class="primary" id="rebuildBtn">🔄 Oppdater ark</button>
+      </div>
+      <div class="field">
+        <button class="primary" id="printBtn">🖨️ Skriv ut</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field grow">
+        <label for="tableNames">Bordnavn (ett per linje — rediger fritt om dere bruker egne navn)</label>
+        <textarea id="tableNames"></textarea>
+      </div>
+    </div>
     <div class="url">Lenke som deles: <span id="urlLabel">—</span></div>
-    <button class="primary" onclick="window.print()">🖨️ Skriv ut</button>
+    <div class="hint">Hvert bordnavn under gir ett eget A4-ark, klart for utskrift — én QR-kode per bord. Endre listen og trykk «Oppdater ark» for å bygge på nytt.</div>
   </div>
+
   <div class="sheet" id="sheet"></div>
 
 <script src="/assets/app.js"></script>
@@ -77,42 +248,91 @@
   const A = window.WeddingApp;
   const sheet = document.getElementById('sheet');
   const urlLabel = document.getElementById('urlLabel');
+  const tableCountInput = document.getElementById('tableCount');
+  const tableNamesInput = document.getElementById('tableNames');
+  const rebuildBtn = document.getElementById('rebuildBtn');
+  const printBtn = document.getElementById('printBtn');
+
   const guessUrl = window.location.origin + '/';
   urlLabel.textContent = guessUrl;
 
-  const CARD_COUNT = 6;
+  let coupleNames = 'Karoline & Peter';
+  let weddingDate = '';
 
-  async function build(){
-    let coupleNames = 'Karoline & Peter';
-    let weddingDate = '';
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str == null ? '' : str;
+    return d.innerHTML;
+  }
+
+  function defaultNames(n){
+    const list = [];
+    for(let i=1;i<=n;i++) list.push('Bord ' + i);
+    return list.join('\n');
+  }
+
+  function currentNames(){
+    return tableNamesInput.value
+      .split('\n')
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+
+  function build(){
+    const names = currentNames();
+    sheet.innerHTML = '';
+
+    names.forEach((tableName) => {
+      const page = document.createElement('div');
+      page.className = 'qr-page';
+      const qrId = 'qr-' + Math.random().toString(36).slice(2, 9);
+      page.innerHTML =
+        '<div class="frame"></div>' +
+        '<div class="top">' +
+          '<div class="brand-names">' + escapeHtml(coupleNames) + '</div>' +
+          '<div class="brand-date">' + escapeHtml(weddingDate) + '</div>' +
+          '<div class="divider"></div>' +
+          '<div class="heading">🔮 Gjett taletidene!</div>' +
+          '<div class="lead">Hvor lenge tror dere talerne kommer til å snakke? Skann QR-koden og send inn bordets felles tips — bordet som treffer nærmest vinner!</div>' +
+        '</div>' +
+        '<div class="middle">' +
+          (tableName ? '<div class="table-tag">' + escapeHtml(tableName) + '</div>' : '') +
+          '<div class="qr-box" id="' + qrId + '"></div>' +
+          '<div class="url-fallback">' + escapeHtml(guessUrl.replace(/^https?:\/\//,'')) + '</div>' +
+        '</div>' +
+        '<div class="bottom">' +
+          '<div class="responsibility">💡 <b>Bli enige sammen ved bordet</b> om hva dere tror er riktig svar — men la <b>én person</b> skrive tipsene inn på sin telefon, slik at det blir ett samlet tips per bord.</div>' +
+          '<div class="footer-note">' + escapeHtml(tableName || 'Gjettekonkurranse') + '</div>' +
+        '</div>';
+      sheet.appendChild(page);
+      new QRCode(document.getElementById(qrId), {
+        text: guessUrl,
+        width: 260,
+        height: 260,
+        colorDark: '#3a332c',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    });
+  }
+
+  rebuildBtn.addEventListener('click', build);
+  printBtn.addEventListener('click', () => window.print());
+  tableCountInput.addEventListener('change', () => {
+    tableNamesInput.value = defaultNames(parseInt(tableCountInput.value, 10) || 1);
+  });
+
+  async function init(){
     try{
       const state = await A.apiGet('/api/state');
       coupleNames = state.coupleNames || coupleNames;
       weddingDate = state.weddingDate || '';
     }catch(e){ /* fall back to defaults */ }
-
-    for(let i=0;i<CARD_COUNT;i++){
-      const card = document.createElement('div');
-      card.className = 'qr-card';
-      card.innerHTML =
-        '<div class="brand-names">'+coupleNames+'</div>'+
-        '<div class="brand-date">'+weddingDate+'</div>'+
-        '<div class="qr-box" id="qr-'+i+'"></div>'+
-        '<div class="caption">📱 Skann for å gjette på taletidene!</div>'+
-        '<div class="instructions">Skriv inn navnet ditt og gjett hvor lang tid hver taler bruker</div>';
-      sheet.appendChild(card);
-      new QRCode(document.getElementById('qr-'+i), {
-        text: guessUrl,
-        width: 190,
-        height: 190,
-        colorDark: '#3a332c',
-        colorLight: '#faf5ee',
-        correctLevel: QRCode.CorrectLevel.M
-      });
-    }
+    tableNamesInput.value = defaultNames(parseInt(tableCountInput.value, 10) || 10);
+    build();
   }
 
-  build();
+  init();
 })();
 </script>
 </body>
