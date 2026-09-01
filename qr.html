@@ -140,19 +140,6 @@
     align-items:center;
     gap:5mm;
   }
-  .qr-page .table-tag{
-    display:inline-block;
-    background:var(--cream);
-    color:var(--gold);
-    border:1px solid var(--gold-light);
-    border-radius:30px;
-    padding:6px 26px;
-    font-family:'Cormorant Garamond',serif;
-    font-weight:700;
-    font-size:20px;
-    letter-spacing:0.1em;
-    text-transform:uppercase;
-  }
   .qr-page .qr-box{
     background:#fff;
     border:1px solid var(--line);
@@ -189,13 +176,11 @@
     line-height:1.55;
   }
   .qr-page .responsibility b{ color:var(--gold); }
-  .qr-page .footer-note{
-    font-size:10px;
-    letter-spacing:0.08em;
-    text-transform:uppercase;
+  .qr-page .name-note{
+    font-size:12px;
     color:var(--charcoal-soft);
-    opacity:0.8;
   }
+  .qr-page .name-note b{ color:var(--charcoal); }
 
   @media print{
     html,body{ background:#fff; }
@@ -220,8 +205,8 @@
   <div class="toolbar">
     <div class="row">
       <div class="field">
-        <label for="tableCount">Antall bord</label>
-        <input type="number" id="tableCount" min="1" max="60" value="10">
+        <label for="copyCount">Antall eksemplarer</label>
+        <input type="number" id="copyCount" min="1" max="60" value="12">
       </div>
       <div class="field">
         <button class="primary" id="rebuildBtn">🔄 Oppdater ark</button>
@@ -230,14 +215,8 @@
         <button class="primary" id="printBtn">🖨️ Skriv ut</button>
       </div>
     </div>
-    <div class="row">
-      <div class="field grow">
-        <label for="tableNames">Bordnavn (ett per linje — rediger fritt om dere bruker egne navn)</label>
-        <textarea id="tableNames"></textarea>
-      </div>
-    </div>
     <div class="url">Lenke som deles: <span id="urlLabel">—</span></div>
-    <div class="hint">Hvert bordnavn under gir ett eget A4-ark, klart for utskrift — én QR-kode per bord. Endre listen og trykk «Oppdater ark» for å bygge på nytt.</div>
+    <div class="hint">Arket er generisk — bordene navngir seg selv inne i gjettesiden når de sender inn tipset sitt. Sett ønsket antall eksemplarer over og skriv ut — hvert eksemplar blir ett eget A4-ark.</div>
   </div>
 
   <div class="sheet" id="sheet"></div>
@@ -248,8 +227,7 @@
   const A = window.WeddingApp;
   const sheet = document.getElementById('sheet');
   const urlLabel = document.getElementById('urlLabel');
-  const tableCountInput = document.getElementById('tableCount');
-  const tableNamesInput = document.getElementById('tableNames');
+  const copyCountInput = document.getElementById('copyCount');
   const rebuildBtn = document.getElementById('rebuildBtn');
   const printBtn = document.getElementById('printBtn');
 
@@ -265,24 +243,15 @@
     return d.innerHTML;
   }
 
-  function defaultNames(n){
-    const list = [];
-    for(let i=1;i<=n;i++) list.push('Bord ' + i);
-    return list.join('\n');
-  }
-
-  function currentNames(){
-    return tableNamesInput.value
-      .split('\n')
-      .map(s => s.trim())
-      .filter(Boolean);
-  }
-
+  // Arket er bevisst generisk og identisk for alle bord — bordene skriver inn sitt eget
+  // navn ("Bordets navn") inne på gjettesiden når de sender inn tipset, så vi trenger
+  // ikke å trykke bordnavn/numre på selve QR-arket. Det gjør arket enkelt å skalere:
+  // samme design, bare skriv ut like mange eksemplarer som det er bord.
   function build(){
-    const names = currentNames();
+    const count = Math.max(1, Math.min(60, parseInt(copyCountInput.value, 10) || 1));
     sheet.innerHTML = '';
 
-    names.forEach((tableName) => {
+    for(let i=0;i<count;i++){
       const page = document.createElement('div');
       page.className = 'qr-page';
       const qrId = 'qr-' + Math.random().toString(36).slice(2, 9);
@@ -296,13 +265,12 @@
           '<div class="lead">Hvor lenge tror dere talerne kommer til å snakke? Skann QR-koden og send inn bordets felles tips — bordet som treffer nærmest vinner!</div>' +
         '</div>' +
         '<div class="middle">' +
-          (tableName ? '<div class="table-tag">' + escapeHtml(tableName) + '</div>' : '') +
           '<div class="qr-box" id="' + qrId + '"></div>' +
           '<div class="url-fallback">' + escapeHtml(guessUrl.replace(/^https?:\/\//,'')) + '</div>' +
         '</div>' +
         '<div class="bottom">' +
+          '<div class="name-note">📝 Skriv inn <b>bordets navn</b> på siden når dere sender inn tipset</div>' +
           '<div class="responsibility">💡 <b>Bli enige sammen ved bordet</b> om hva dere tror er riktig svar — men la <b>én person</b> skrive tipsene inn på sin telefon, slik at det blir ett samlet tips per bord.</div>' +
-          '<div class="footer-note">' + escapeHtml(tableName || 'Gjettekonkurranse') + '</div>' +
         '</div>';
       sheet.appendChild(page);
       new QRCode(document.getElementById(qrId), {
@@ -313,14 +281,11 @@
         colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.M
       });
-    });
+    }
   }
 
   rebuildBtn.addEventListener('click', build);
   printBtn.addEventListener('click', () => window.print());
-  tableCountInput.addEventListener('change', () => {
-    tableNamesInput.value = defaultNames(parseInt(tableCountInput.value, 10) || 1);
-  });
 
   async function init(){
     try{
@@ -328,7 +293,6 @@
       coupleNames = state.coupleNames || coupleNames;
       weddingDate = state.weddingDate || '';
     }catch(e){ /* fall back to defaults */ }
-    tableNamesInput.value = defaultNames(parseInt(tableCountInput.value, 10) || 10);
     build();
   }
 
