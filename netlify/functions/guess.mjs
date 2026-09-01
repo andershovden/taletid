@@ -56,11 +56,15 @@ export default async (req) => {
 
     const all = (await store.get("guesses", { type: "json" })) || {};
     const key = keyFor(name);
-    const existing = all[key] || { name, entries: {} };
+    const now = new Date().toISOString();
+    const existing = all[key] || { name, entries: {}, createdAt: now };
     all[key] = {
       name,
       entries: { ...existing.entries, ...cleanEntries },
-      updatedAt: new Date().toISOString()
+      // createdAt = tidspunktet bordet FØRST sendte inn en gjetning. Brukes som en av
+      // flere tie-breakere i /api/leaderboard, og skal aldri endres ved senere redigering.
+      createdAt: existing.createdAt || now,
+      updatedAt: now
     };
     await store.setJSON("guesses", all);
     return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders() });
