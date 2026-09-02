@@ -1520,6 +1520,11 @@
     sp.finished = true;
     sp.actualSeconds = Math.round(finalElapsed);
     saveSpeakers();
+    // Siste taler er ferdig => konkurransen avsluttes automatisk, uten at
+    // konferansieren må huske å trykke "Avslutt konkurransen"-knappen selv.
+    if(speakers.length > 0 && speakers.every(s => s.finished)){
+      competitionFinished = true;
+    }
     advanceToNextUnfinished();
     flyOutAndShowLeaderboard();
   }
@@ -1555,8 +1560,10 @@
       liveLeft.classList.remove('fly-out');
       renderFinishedLeaderboard();
       startConfettiLoop();
-      // Champagne-boblene (den store feiringen) er forbeholdt det eksplisitte
-      // "Avslutt konkurransen"-øyeblikket (crownWinner), ikke hver enkelt tale.
+      // Champagne-boblene (den store feiringen) vises både når konferansieren trykker
+      // "Avslutt konkurransen" manuelt, og når siste taler nettopp ble ferdig og
+      // konkurransen dermed ble avsluttet automatisk (se finishSpeech).
+      if(lbData.allDone) startBubbleLoop();
     });
   }
 
