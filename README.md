@@ -22,10 +22,12 @@ Det er tre sider som alle snakker med den samme lille "backend'en":
    Fra et redigeringsvindu i admin kan man legge inn talere, brudeparets egen gjetning
    per taler, og navn/dato på brudeparet. Når en taler markeres som "Ferdig ✓" sendes
    det faktiske resultatet til serveren, og gjettekonkurransen kan regne ut poeng for
-   den taleren. Når konferansieren trykker "🏆 Avslutt konkurransen & kår vinner" på
-   resultatscenen, kåres vinneren offisielt — dette er en bevisst, eksplisitt handling
-   fremfor å bli utledet automatisk av at alle talere i listen er markert ferdig (en
-   glemt eller ekstra taler i listen skal aldri kunne hindre at vinneren vises).
+   den taleren. Resultatscenen viser da kun "🏆 Stillingen så langt" — poengsummen
+   aggregert taler for taler, uten å kåre noen vinner. Først når den *siste* taleren i
+   listen er markert ferdig, kåres vinneren automatisk. Knappen "🏆 Avslutt
+   konkurransen & kår vinner" er skjult helt frem til det punktet, og er ment som en
+   sikkerhetsventil for konferansieren for det sjeldne tilfellet der en glemt eller
+   ekstra taler i listen hindrer den automatiske kåringen.
 
 2. **`index.html`** (forsiden) — dette er **siden gjestene bruker på mobilen**. Hvert
    bord blir enige om ett tips per taler, skriver inn et bordnavn og sender inn
