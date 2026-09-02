@@ -3,23 +3,18 @@ import { getStore } from "@netlify/blobs";
 const DEFAULT_STATE = {
   coupleNames: "Karoline & Peter",
   weddingDate: "4.–5. september 2026",
-  speakers: []
+  speakers: [],
+  competitionFinished: false
 };
 
 function corsHeaders() {
   return {
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "*",
-    "access-control-allow-headers": "content-type, x-admin-key",
+    "access-control-allow-headers": "content-type",
     "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
     "cache-control": "no-store"
   };
-}
-
-function checkAdminKey(req) {
-  const adminKey = req.headers.get("x-admin-key") || "";
-  const expected = (typeof Netlify !== "undefined" && Netlify.env.get("ADMIN_KEY")) || "bryllup2026";
-  return adminKey === expected;
 }
 
 function sanitizeState(input) {
@@ -30,7 +25,11 @@ function sanitizeState(input) {
     weddingDate: typeof input.weddingDate === "string" && input.weddingDate.trim()
       ? input.weddingDate.slice(0, 120)
       : DEFAULT_STATE.weddingDate,
-    speakers: []
+    speakers: [],
+    // Eksplisitt satt av konferansieren via "Avslutt konkurransen"-knappen i
+    // admin.html — IKKE utledet fra om alle talere i listen er markert ferdig.
+    // En glemt/ekstra taler i listen skal aldri kunne hindre at vinneren kåres.
+    competitionFinished: !!input.competitionFinished
   };
   if (Array.isArray(input.speakers)) {
     out.speakers = input.speakers.slice(0, 60).map((sp, i) => ({
@@ -58,9 +57,10 @@ export default async (req) => {
   }
 
   if (req.method === "POST") {
-    if (!checkAdminKey(req)) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: corsHeaders() });
-    }
+    // Ingen admin-nøkkel kreves — dette er ett kontrollpanel på én enhet som
+    // toastmasteren bruker under selve bryllupet, ikke en flerbruker-tjeneste.
+    // En feil/manglende nøkkel forårsaket tidligere stille 401-feil der
+    // ingenting ble publisert til gjestene uten at noen fikk vite hvorfor.
     let body;
     try {
       body = await req.json();
@@ -73,11 +73,8 @@ export default async (req) => {
   }
 
   if (req.method === "DELETE") {
-    if (!checkAdminKey(req)) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: corsHeaders() });
-    }
     // Nullstiller alt: talerliste, resultater og gjestenes gjetninger. Brukes for å rydde opp
-    // etter testing før selve bryllupet.
+    // etter testing før selve bryllupet. Admin.html ber om dobbel bekreftelse først.
     await store.setJSON("state", DEFAULT_STATE);
     await store.delete("guesses");
     return new Response(JSON.stringify({ ok: true, state: DEFAULT_STATE }), { headers: corsHeaders() });

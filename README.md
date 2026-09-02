@@ -20,9 +20,12 @@ Det er tre sider som alle snakker med den samme lille "backend'en":
    - en resultatscene med ledertavle.
 
    Fra et redigeringsvindu i admin kan man legge inn talere, brudeparets egen gjetning
-   per taler, navn/dato på brudeparet, og en admin-nøkkel. Når en taler markeres som
-   "Ferdig ✓" sendes det faktiske resultatet til serveren, og gjettekonkurransen kan
-   regne ut poeng for den taleren.
+   per taler, og navn/dato på brudeparet. Når en taler markeres som "Ferdig ✓" sendes
+   det faktiske resultatet til serveren, og gjettekonkurransen kan regne ut poeng for
+   den taleren. Når konferansieren trykker "🏆 Avslutt konkurransen & kår vinner" på
+   resultatscenen, kåres vinneren offisielt — dette er en bevisst, eksplisitt handling
+   fremfor å bli utledet automatisk av at alle talere i listen er markert ferdig (en
+   glemt eller ekstra taler i listen skal aldri kunne hindre at vinneren vises).
 
 2. **`index.html`** (forsiden) — dette er **siden gjestene bruker på mobilen**. Hvert
    bord blir enige om ett tips per taler, skriver inn et bordnavn og sender inn
@@ -55,10 +58,11 @@ funksjonene i `netlify/functions/`. Åpne deretter:
 - `http://localhost:8888/admin` — kontrollpanelet
 - `http://localhost:8888/qr` — QR-arkene
 
-For faktisk bruk deployes siden til Netlify (koblet til dette repoet). Sett gjerne en
-egen `ADMIN_KEY`-miljøvariabel i Netlify-prosjektet (standardverdien er
-`bryllup2026`) — den må skrives inn i redigeringsvinduet i `admin.html` for at
-endringer skal kunne publiseres til gjestene.
+For faktisk bruk deployes siden til Netlify (koblet til dette repoet). Kontrollpanelet
+(`/admin`) krever ingen innlogging eller nøkkel — det er tenkt brukt av én person
+(konferansieren) på én enhet under selve bryllupet, ikke som en flerbruker-tjeneste.
+Lenken til `/admin` bør derfor ikke deles offentlig, siden alle som har den kan endre
+talerlisten og resultatene.
 
 ## Filoversikt
 
@@ -69,7 +73,7 @@ endringer skal kunne publiseres til gjestene.
 | `qr.html` | Genererer utskriftsklare A4-ark med QR-kode til gjestesiden |
 | `assets/app.js` | Delt JS-hjelpekode (tidsformatering, API-kall, poengformel, konfetti-animasjon) brukt av `index.html` og `qr.html` |
 | `assets/theme.css` | Delt styling (farger, fonter, kort-design) for gjestesiden og QR-siden |
-| `netlify/functions/state.mjs` | API (`/api/state`) for å hente/lagre talerliste, brudeparets navn/dato og hvilke talere som er ferdige. Skriving krever admin-nøkkel |
+| `netlify/functions/state.mjs` | API (`/api/state`) for å hente/lagre talerliste, brudeparets navn/dato, hvilke talere som er ferdige, og om konkurransen er offisielt avsluttet |
 | `netlify/functions/guess.mjs` | API (`/api/guess`) der bordene sender inn sine gjetninger per taler |
 | `netlify/functions/leaderboard.mjs` | API (`/api/leaderboard`) — **den eneste kilden til sannhet** for poeng og rangering. Regner ut avvik, poeng og en garantert unik ledertavle (med flere nivåer tie-break), slik at storskjermen og gjestesiden aldri kan vise ulike tall |
 | `netlify.toml` | Netlify-konfigurasjon: hvilken mappe som publiseres, hvor funksjonene ligger, og fine URL-er (`/admin`, `/qr`) |

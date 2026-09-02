@@ -122,7 +122,13 @@ export default async (req) => {
     };
   });
 
-  const allDone = speakers.length > 0 && speakers.every((s) => s.finished);
+  // "Ferdig kåret" styres EKSPLISITT av konferansieren (state.competitionFinished,
+  // satt via "Avslutt konkurransen"-knappen i admin.html) — utledes bevisst IKKE
+  // fra om alle rader i talerlisten er markert ferdig. Det gjorde vinner-kåringen
+  // skjør: en glemt eller ekstra taler i listen (f.eks. fra tidligere testing)
+  // kunne hindre at vinneren noensinne ble vist, selv om konkurransen reelt var over.
+  const allDone = !!state.competitionFinished;
+  const finishedCount = speakers.filter((s) => s.finished).length;
 
   const leaderboard = Object.values(totals)
     .sort((a, b) => {
@@ -140,6 +146,11 @@ export default async (req) => {
     coupleNames: state.coupleNames || "",
     weddingDate: state.weddingDate || "",
     allDone,
+    // Hjelpefelt for admin.html, slik at konferansieren kan se "X av Y talere
+    // ferdig" som en veiledning for når det er naturlig å avslutte konkurransen —
+    // uten at dette tallet i seg selv styrer vinner-kåringen (se allDone over).
+    finishedCount,
+    totalCount: speakers.length,
     speakers: speakerResults,
     leaderboard
   };
