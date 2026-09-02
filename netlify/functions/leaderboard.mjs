@@ -76,9 +76,11 @@ export default async (req) => {
         finished: false,
         actualSeconds: null,
         coupleGuessSeconds: sp.coupleGuessSeconds != null ? sp.coupleGuessSeconds : null,
+        // Brudeparet vises alltid øverst i listen (uansett gjetning), deretter
+        // bordene sortert på gjetning.
         guesses: rawGuesses
           .slice()
-          .sort((a, b) => a.guess - b.guess)
+          .sort((a, b) => (a.isCouple !== b.isCouple ? (a.isCouple ? -1 : 1) : a.guess - b.guess))
           .map((g) => ({ name: g.name, guess: g.guess, isCouple: g.isCouple }))
       };
     }
@@ -104,9 +106,11 @@ export default async (req) => {
       finished: true,
       actualSeconds: sp.actualSeconds,
       coupleGuessSeconds: sp.coupleGuessSeconds != null ? sp.coupleGuessSeconds : null,
+      // Brudeparet vises alltid øverst i listen (uansett avvik), deretter
+      // bordene sortert fra nærmest til lengst unna.
       guesses: scored
         .slice()
-        .sort((a, b) => a.diff - b.diff)
+        .sort((a, b) => (a.isCouple !== b.isCouple ? (a.isCouple ? -1 : 1) : a.diff - b.diff))
         .map((g) => ({
           name: g.name,
           guess: g.guess,

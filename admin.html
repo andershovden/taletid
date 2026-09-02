@@ -1493,10 +1493,6 @@
     sp.finished = true;
     sp.actualSeconds = Math.round(finalElapsed);
     saveSpeakers();
-    // Poeng/rangering regnes ut på serveren (/api/leaderboard) og krever at det nettopp
-    // publiserte resultatet er lagret der først — vent derfor på hele kjeden før vi
-    // henter og viser den ferdige tavlen, så tallene som vises alltid stemmer.
-    pushStateToServer().then(() => pollGuesses()).then(() => renderFinishedLeaderboard());
     advanceToNextUnfinished();
     flyOutAndShowLeaderboard();
   }
@@ -1517,14 +1513,28 @@
   function flyOutAndShowLeaderboard(){
     const allDone = speakers.length > 0 && speakers.every(s => s.finished);
     liveLeft.classList.add('fly-out');
-    renderFinishedLeaderboard();
-    setTimeout(() => {
+
+    // Poeng/rangering regnes ut på serveren (/api/leaderboard) og krever at det nettopp
+    // publiserte resultatet er lagret der først. Vi venter derfor på HELE kjeden
+    // (publiser → hent ferske data) FØR vi bytter til resultatscenen og tegner den,
+    // slik at riktige poengsummer og riktig "vinner kåret"-tekst alltid vises —
+    // aldri en tom eller foreldet tavle fordi nettverket ikke rakk å bli ferdig
+    // innen fly-out-animasjonen var over.
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 650));
+    const publishAndRefresh = pushStateToServer().then((ok) => {
+      if(!ok){
+        showBanner('⚠️ Kunne ikke publisere resultatet — sjekk admin-nøkkelen!');
+      }
+      return pollGuesses();
+    });
+
+    Promise.all([minDelay, publishAndRefresh]).then(() => {
       setScene('finished');
       liveLeft.classList.remove('fly-out');
-      renderFinishedLeaderboard(); // fanger opp ferske serverdata om de har rukket å komme inn
+      renderFinishedLeaderboard();
       startConfettiLoop();
       if(allDone) startBubbleLoop();
-    }, 650);
+    });
   }
 
   function launchConfettiBurst(count){
