@@ -10,7 +10,7 @@ function corsHeaders() {
   };
 }
 
-// Reservert for brudeparets egen gjetning i /api/leaderboard — et bord skal ikke
+// Reservert for brudeparets egen gjetning i /api/leaderboard — ingen andre skal
 // kunne late som om det er brudeparet ved å navngi seg noe som ligner. Sjekket mot
 // bokstaver/tall i navnet (uten mellomrom/emoji/tegn), slik at «Brudeparet», «💑
 // Brudeparet» og lignende varianter alle fanges opp, ikke bare den interne nøkkelen.
@@ -69,16 +69,16 @@ export default async (req) => {
 
     const all = (await store.get("guesses", { type: "json" })) || {};
     const key = keyFor(name);
-    // Hvis et bord navngir seg selv noe som ligner brudeparet, gi det et synlig
+    // Hvis noen navngir seg selv noe som ligner brudeparet, gi dem et synlig
     // annet visningsnavn — ellers ville det se ut som brudeparet dukker opp to
-    // ganger i gjettelisten (én gang som bordet, én gang som den ekte 💑-raden).
-    const displayName = looksLikeCouple(name) ? name + " (bord)" : name;
+    // ganger i gjettelisten (én gang som den påmeldte, én gang som den ekte 💑-raden).
+    const displayName = looksLikeCouple(name) ? name + " (gjest)" : name;
     const now = new Date().toISOString();
     const existing = all[key] || { name: displayName, entries: {}, createdAt: now };
     all[key] = {
       name: displayName,
       entries: { ...existing.entries, ...cleanEntries },
-      // createdAt = tidspunktet bordet FØRST sendte inn en gjetning. Brukes som en av
+      // createdAt = tidspunktet den påmeldte FØRST sendte inn en gjetning. Brukes som en av
       // flere tie-breakere i /api/leaderboard, og skal aldri endres ved senere redigering.
       createdAt: existing.createdAt || now,
       updatedAt: now

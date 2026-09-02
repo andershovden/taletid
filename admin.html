@@ -876,7 +876,7 @@
     </div>
 
     <div class="live-right">
-      <h2 class="live-right-heading">🔮 Bordenes gjetninger</h2>
+      <h2 class="live-right-heading">🔮 Gjetninger</h2>
       <div class="live-right-sub" id="liveRightCount">Ingen har gjettet ennå</div>
       <div id="liveGuessList" class="live-guess-list"></div>
     </div>
@@ -909,7 +909,7 @@
   <div class="modal-content">
     <h2>Talere &amp; innstillinger</h2>
     <div class="modal-sub">Alle talere er bedt om å holde seg innenfor 5–7 minutter. Dette gjelder likt for alle, og styrer fargene på skjermen.</div>
-    <div class="rule-note">💛 Min/sek-feltene under er <strong>brudeparets gjetning</strong>. Brudeparet er med i selve konkurransen på lik linje med bordene — gjetningen vises merket med 💑 i gjettelisten med en gang du lagrer, og telles med i poeng og på ledertavlen. Når du trykker «Ferdig ✓» på en taler, publiseres i tillegg det <strong>faktiske resultatet</strong> til gjettekonkurransen.</div>
+    <div class="rule-note">💛 Min/sek-feltene under er <strong>brudeparets gjetning</strong>. Brudeparet er med i selve konkurransen på lik linje med de andre — gjetningen vises merket med 💑 i gjettelisten med en gang du lagrer, og telles med i poeng og på ledertavlen. Når du trykker «Ferdig ✓» på en taler, publiseres i tillegg det <strong>faktiske resultatet</strong> til gjettekonkurransen.</div>
 
     <div class="settings-fields">
       <input type="text" id="coupleNamesInput" placeholder="Brudeparets navn">
@@ -933,7 +933,7 @@
       </div>
       <button id="closeModalBtn" class="primary">Lagre &amp; lukk</button>
     </div>
-    <div class="field-hint" style="text-align:left;margin-top:8px;">«Nullstill alt» sletter talerlisten, resultater og alle bords gjetninger permanent — kun til bruk under testing.</div>
+    <div class="field-hint" style="text-align:left;margin-top:8px;">«Nullstill alt» sletter talerlisten, resultater og alle innsendte gjetninger permanent — kun til bruk under testing.</div>
   </div>
 </div>
 
@@ -1151,8 +1151,8 @@
     const lbSpeaker = (lb.speakers || []).find(s => s.id === sp.id);
     const guesses = (lbSpeaker && lbSpeaker.guesses) || [];
     liveRightCount.textContent = guesses.length === 0
-      ? 'Ingen bord har gjettet ennå'
-      : guesses.length + (guesses.length===1 ? ' bord har gjettet' : ' bord har gjettet');
+      ? 'Ingen har gjettet ennå'
+      : guesses.length + ' tips sendt inn';
     if(guesses.length === 0){
       liveGuessList.innerHTML = '<div class="live-empty">Venter på gjetninger...</div>';
       return;
@@ -1779,7 +1779,7 @@
   });
 
   resetAllBtn.addEventListener('click', async () => {
-    const sure = confirm('Dette sletter ALLE talere, resultater og alle bords gjetninger permanent — både her og på gjestenes side. Er du sikker?');
+    const sure = confirm('Dette sletter ALLE talere, resultater og alle innsendte gjetninger permanent — både her og på gjestenes side. Er du sikker?');
     if(!sure) return;
     const sureAgain = confirm('Helt sikker? Dette kan ikke angres.');
     if(!sureAgain) return;
