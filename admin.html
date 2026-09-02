@@ -748,9 +748,16 @@
     font-size:10px;
     color:var(--charcoal-soft);
     text-align:right;
-    margin-top:-10px;
+    margin-top:6px;
     margin-bottom:12px;
   }
+  .live-guess-row.couple-row{
+    background:var(--cream);
+    font-weight:700;
+  }
+  .live-guess-row.couple-row .table-name{ color:var(--gold); }
+  .finished-row.couple-row{ background:var(--cream); }
+  .finished-row.couple-row .table-name{ color:var(--gold); }
   .sync-line{
     font-size:11px;
     color:var(--charcoal-soft);
@@ -895,7 +902,7 @@
   <div class="modal-content">
     <h2>Talere &amp; innstillinger</h2>
     <div class="modal-sub">Alle talere er bedt om å holde seg innenfor 5–7 minutter. Dette gjelder likt for alle, og styrer fargene på skjermen.</div>
-    <div class="rule-note">💛 Min/sek-feltene under er <strong>brudeparets gjetning</strong>. Den vises øverst under hver taler på gjestenes side (med en gang du lagrer), slik at alle kan se hva brudeparet tippet. Når du trykker «Ferdig ✓» på en taler, publiseres i tillegg det <strong>faktiske resultatet</strong> til gjettekonkurransen.</div>
+    <div class="rule-note">💛 Min/sek-feltene under er <strong>brudeparets gjetning</strong>. Brudeparet er med i selve konkurransen på lik linje med bordene — gjetningen vises merket med 💑 i gjettelisten med en gang du lagrer, og telles med i poeng og på ledertavlen. Når du trykker «Ferdig ✓» på en taler, publiseres i tillegg det <strong>faktiske resultatet</strong> til gjettekonkurransen.</div>
 
     <div class="settings-fields">
       <input type="text" id="coupleNamesInput" placeholder="Brudeparets navn">
@@ -1200,7 +1207,7 @@
       return;
     }
     liveGuessList.innerHTML = guesses.map(g =>
-      '<div class="live-guess-row"><span class="table-name">'+escapeHtml(g.name)+'</span><span class="table-guess">'+fmt(g.guess)+'</span></div>'
+      '<div class="live-guess-row'+(g.isCouple?' couple-row':'')+'"><span class="table-name">'+escapeHtml(g.name)+'</span><span class="table-guess">'+fmt(g.guess)+'</span></div>'
     ).join('');
   }
 
@@ -1221,7 +1228,7 @@
     finishedPrize.textContent = allDone ? ('🍾 ' + rows[0].name + ' vinner en flaske bobler!') : '';
     const medals = ['🥇','🥈','🥉'];
     finishedLeaderboard.innerHTML = rows.map((r,i) =>
-      '<div class="finished-row'+(i===0?' leader':'')+'"><span class="medal">'+(medals[i]||('#'+(i+1)))+'</span><span class="table-name">'+escapeHtml(r.name)+'</span><span class="table-points">'+r.points+' p</span></div>'
+      '<div class="finished-row'+(i===0?' leader':'')+(r.isCouple?' couple-row':'')+'"><span class="medal">'+(medals[i]||('#'+(i+1)))+'</span><span class="table-name">'+escapeHtml(r.name)+'</span><span class="table-points">'+r.points+' p</span></div>'
     ).join('');
   }
 

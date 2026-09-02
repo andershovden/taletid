@@ -10,8 +10,13 @@ function corsHeaders() {
   };
 }
 
+// Reservert for brudeparets egen gjetning i /api/leaderboard — et bord skal ikke
+// kunne late som om det er brudeparet ved å navngi seg det samme.
+const COUPLE_KEY = "__brudeparet__";
+
 function keyFor(name) {
-  return name.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 60);
+  const key = name.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 60);
+  return key === COUPLE_KEY ? key + "-bord" : key;
 }
 
 export default async (req) => {

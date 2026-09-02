@@ -16,10 +16,17 @@ function pointsFor(diffSec) {
   return Math.max(0, Math.round(50 - diffSec / 6));
 }
 
+// Brudeparet deltar i konkurransen på lik linje med bordene, med denne faste
+// nøkkelen/navnet. Reservert slik at et bord ikke kan late som om det er brudeparet.
+const COUPLE_KEY = "__brudeparet__";
+const COUPLE_NAME = "💑 Brudeparet";
+
 // Denne funksjonen er den ENE kilden til sannhet for poengsum og rangering, slik at
-// gjettesiden og storskjermen aldri kan vise ulike resultater. Rangeringen er alltid
-// strengt sortert — det kan aldri bli uavgjort om førsteplassen, fordi vi legger på
-// flere tie-breakere etter hverandre helt til rekkefølgen er unik:
+// gjettesiden og storskjermen aldri kan vise ulike resultater. Brudeparets egen
+// gjetning (state.speakers[].coupleGuessSeconds) telles som et eget "bord" i
+// konkurransen (se COUPLE_KEY under), på lik linje med gjestenes bord. Rangeringen er
+// alltid strengt sortert — det kan aldri bli uavgjort om førsteplassen, fordi vi
+// legger på flere tie-breakere etter hverandre helt til rekkefølgen er unik:
 //   1. Flest poeng totalt
 //   2. Lavest samlet avvik i sekunder (mest presise bord over hele kvelden)
 //   3. Flest ganger nærmest på en enkelt taler ("🎯 nærmest"-bonuser)
@@ -41,9 +48,9 @@ export default async (req) => {
 
   // totals[key] = { name, points, totalDiff, bonusCount, createdAt }
   const totals = {};
-  function totalFor(key, name, createdAt) {
+  function totalFor(key, name, createdAt, isCouple) {
     if (!totals[key]) {
-      totals[key] = { key, name, points: 0, totalDiff: 0, bonusCount: 0, createdAt: createdAt || null };
+      totals[key] = { key, name, points: 0, totalDiff: 0, bonusCount: 0, createdAt: createdAt || null, isCouple: !!isCouple };
     }
     return totals[key];
   }
@@ -54,7 +61,12 @@ export default async (req) => {
       const rec = guesses[key] || {};
       const g = rec.entries ? rec.entries[sp.id] : undefined;
       if (g == null) continue;
-      rawGuesses.push({ key, name: rec.name, guess: g, createdAt: rec.createdAt || rec.updatedAt || null });
+      rawGuesses.push({ key, name: rec.name, guess: g, createdAt: rec.createdAt || rec.updatedAt || null, isCouple: false });
+    }
+    // Brudeparets gjetning telles som et eget "bord" i konkurransen, slik at den er
+    // med i poengsummen og på ledertavlen akkurat som gjestenes gjetninger.
+    if (sp.coupleGuessSeconds != null) {
+      rawGuesses.push({ key: COUPLE_KEY, name: COUPLE_NAME, guess: sp.coupleGuessSeconds, createdAt: null, isCouple: true });
     }
 
     if (!sp.finished || sp.actualSeconds == null) {
@@ -67,7 +79,7 @@ export default async (req) => {
         guesses: rawGuesses
           .slice()
           .sort((a, b) => a.guess - b.guess)
-          .map((g) => ({ name: g.name, guess: g.guess }))
+          .map((g) => ({ name: g.name, guess: g.guess, isCouple: g.isCouple }))
       };
     }
 
@@ -79,7 +91,7 @@ export default async (req) => {
 
     scored.forEach((g) => {
       const closest = g.diff === minDiff;
-      const t = totalFor(g.key, g.name, g.createdAt);
+      const t = totalFor(g.key, g.name, g.createdAt, g.isCouple);
       t.points += g.points + (closest ? 10 : 0);
       t.totalDiff += g.diff;
       if (closest) t.bonusCount += 1;
@@ -100,7 +112,8 @@ export default async (req) => {
           guess: g.guess,
           diff: g.diff,
           closest: g.diff === minDiff,
-          points: g.points + (g.diff === minDiff ? 10 : 0)
+          points: g.points + (g.diff === minDiff ? 10 : 0),
+          isCouple: g.isCouple
         }))
     };
   });
