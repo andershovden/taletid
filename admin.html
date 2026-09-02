@@ -911,7 +911,7 @@
     <div class="settings-fields">
       <input type="text" id="adminKeyInput" placeholder="Admin-nøkkel (fra Netlify)">
     </div>
-    <div class="sync-line">Admin-nøkkelen må matche miljøvariabelen <code>ADMIN_KEY</code> i Netlify-siden din (standard: <code>bryllup2026</code>).</div>
+    <div class="sync-line">Admin-nøkkelen må matche miljøvariabelen <code>ADMIN_KEY</code> i Netlify-siden din.</div>
 
     <div id="speakerListEditor"></div>
 
@@ -940,10 +940,11 @@
   const LS_COUPLE = 'toastmaster_couple_v1';
   const LS_DATE = 'toastmaster_date_v1';
   const LS_ADMIN_KEY = 'toastmaster_admin_key';
-  // Må matche fallback-verdien i netlify/functions/state.mjs. Forhåndsutfylles i
-  // admin-nøkkelfeltet på et ferskt oppsett, slik at publisering fungerer med en
-  // gang uten at noen må vite at feltet må fylles ut manuelt først.
-  const DEFAULT_ADMIN_KEY = 'bryllup2026';
+  // Må matche ADMIN_KEY-miljøvariabelen som er satt på Netlify-siden for dette
+  // bryllupet. Forhåndsutfylles i admin-nøkkelfeltet på et ferskt oppsett, slik at
+  // publisering fungerer med en gang uten at noen må vite at feltet må fylles ut
+  // manuelt først.
+  const DEFAULT_ADMIN_KEY = 'taletid';
 
   const ORANGE_AT = 5*60;   // 5 min – felles regel for alle talere
   const RED_AT = 7*60;      // 7 min – felles regel for alle talere
