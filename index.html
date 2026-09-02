@@ -6,106 +6,233 @@
 <title>Gjett taletiden!</title>
 <link rel="stylesheet" href="/assets/theme.css">
 <style>
-  .lead{
+  .hero-card{
     text-align:center;
-    font-size:14px;
-    color:var(--charcoal-soft);
-    margin-bottom:22px;
-    line-height:1.5;
+    background:linear-gradient(180deg,#fffdf8,var(--card-soft));
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:30px 22px 26px;
+    margin-bottom:16px;
+    box-shadow:var(--shadow-soft);
+  }
+  .hero-date{
+    font-size:10px;
+    letter-spacing:.32em;
+    text-transform:uppercase;
+    color:var(--ink-mute);
+    font-weight:700;
+  }
+  .hero-names{
+    font-family:'Instrument Serif',serif;
+    font-size:clamp(32px,9vw,44px);
+    line-height:1.05;
+    color:var(--ink);
+    margin-top:10px;
+  }
+  .hero-divider{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin-top:16px;
+  }
+  .hero-divider span{width:44px;height:1px;background:var(--line-soft);}
+  .hero-divider .dot{width:5px;height:5px;flex:0 0 auto;background:var(--gold-light);transform:rotate(45deg);}
+  .hero-tagline{
+    font-family:'Instrument Serif',serif;
+    font-style:italic;
+    font-size:20px;
+    color:var(--ink-soft);
+    margin-top:16px;
+    line-height:1.35;
+  }
+  .hero-lead{
+    font-size:13px;
+    line-height:1.6;
+    color:var(--ink-soft);
+    margin-top:8px;
+    max-width:36ch;
+    margin-left:auto;
+    margin-right:auto;
   }
   .empty-note{
     text-align:center;
-    font-family:'Cormorant Garamond',serif;
+    font-family:'Instrument Serif',serif;
     font-style:italic;
     font-size:18px;
-    color:var(--charcoal-soft);
+    color:var(--ink-faint);
     padding:12px 0;
   }
   .speaker-result{
-    padding:14px 0;
-    border-bottom:1px solid var(--line);
+    padding:16px 0;
+    border-top:1px solid var(--line-soft);
   }
-  .speaker-result:last-child{border-bottom:none;}
+  .speaker-result:first-child{border-top:none;}
   .speaker-result .head{
     display:flex;
     justify-content:space-between;
     align-items:baseline;
-    margin-bottom:8px;
+    gap:10px;
   }
   .speaker-result .head .name{font-weight:700;font-size:16px;}
   .speaker-result .head .actual{
-    font-family:'Cormorant Garamond',serif;
+    display:flex;
+    align-items:baseline;
+    gap:7px;
+  }
+  .speaker-result .head .actual .tag{
+    font-size:9.5px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--ink-mute);
     font-weight:700;
-    font-size:22px;
+  }
+  .speaker-result .head .actual .val{
+    font-family:'Instrument Serif',serif;
+    font-size:24px;
     color:var(--gold);
     font-variant-numeric:tabular-nums;
   }
+  .guess-grid{margin-top:12px;display:flex;flex-direction:column;}
+  .guess-grid-head{
+    display:grid;
+    grid-template-columns:1fr auto auto auto;
+    gap:12px;
+    font-size:9.5px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-mute);
+    font-weight:700;
+    padding-bottom:7px;
+  }
+  .guess-grid-head span{text-align:right;}
+  .guess-grid-head span:first-child{text-align:left;}
+  .guess-grid-row{
+    display:grid;
+    grid-template-columns:1fr auto auto auto;
+    gap:12px;
+    align-items:center;
+    font-size:13.5px;
+    color:var(--ink);
+    padding:8px 6px;
+    border-top:1px solid var(--line-soft);
+    border-radius:8px;
+  }
+  .guess-grid-row span{text-align:right;font-variant-numeric:tabular-nums;}
+  .guess-grid-row span:first-child{text-align:left;font-weight:600;font-variant-numeric:normal;}
+  .guess-grid-row.closest{background:#fdf8ee;}
+  .guess-grid-row .diff{color:var(--ink-faint);}
+  .guess-grid-row .pts{font-weight:700;}
+  .closest-mark{color:var(--gold);}
+  .couple-tag{
+    font-size:8.5px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    border:1px solid var(--chip-border);
+    border-radius:5px;
+    padding:2px 5px;
+    font-weight:700;
+    vertical-align:1px;
+    margin-left:4px;
+  }
   .winner-banner{
     text-align:center;
-    background:linear-gradient(135deg,var(--gold),var(--gold-light));
-    color:#fff;
-    border-radius:18px;
-    padding:26px 20px;
-    margin-bottom:20px;
+    background:var(--dark);
+    color:var(--dark-text);
+    border-radius:20px;
+    padding:30px 20px;
+    margin-bottom:16px;
     box-shadow:var(--shadow);
   }
-  .winner-banner .trophy{font-size:44px;margin-bottom:6px;}
-  .winner-banner h2{color:#fff;font-size:26px;margin-bottom:4px;}
-  .winner-banner .sub{font-size:13px;opacity:0.9;}
+  .winner-banner .trophy{font-size:38px;margin-bottom:8px;}
+  .winner-banner h2{color:var(--dark-text);font-size:27px;margin-bottom:4px;}
+  .winner-banner .sub{font-size:13px;color:var(--dark-text-soft);}
   .refresh-hint{
     text-align:center;
-    font-size:11px;
-    color:var(--charcoal-soft);
-    margin-top:-6px;
+    font-size:10px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    font-weight:600;
+    color:var(--ink-mute);
+    margin-top:-4px;
     margin-bottom:18px;
+    padding:4px 0 8px;
   }
-  .speaker-result .head .pill{ font-size:9px; }
   .guess-count{
     font-size:12px;
-    color:var(--charcoal-soft);
-    margin-bottom:8px;
+    color:var(--ink-mute);
+    margin-top:8px;
   }
-  .couple-row td{
-    font-weight:700;
-    background:var(--cream);
+
+  /* Sammenlagt: mørkt kort med rangert liste (i stedet for tabell) */
+  .lb-card{background:var(--dark);color:var(--dark-text);}
+  .lb-card h2{color:var(--dark-text);}
+  .lb-card .sub{color:var(--dark-text-soft);}
+  .lb-list{margin-top:6px;display:flex;flex-direction:column;}
+  .lb-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:11px 0;
+    border-top:1px solid var(--dark-line);
   }
-  .couple-row td:first-child{ color:var(--gold); }
+  .lb-row:first-child{border-top:none;}
+  .lb-row .rank{
+    font-family:'Instrument Serif',serif;
+    font-size:22px;
+    width:26px;
+    text-align:center;
+    color:#8d8377;
+  }
+  .lb-row:first-child .rank{color:#d8b877;}
+  .lb-row .name{flex:1;font-size:15px;font-weight:600;}
+  .lb-row .pts{
+    font-family:'Instrument Serif',serif;
+    font-size:22px;
+    color:#e2dbd0;
+    font-variant-numeric:tabular-nums;
+  }
+  .lb-row:first-child .pts{color:#d8b877;}
 </style>
 </head>
 <body>
 <div class="confetti-layer" id="confettiLayer"></div>
 <div class="container">
-  <div class="brand">
-    <div class="brand-names" id="brandNames">Karoline &amp; Peter</div>
-    <div class="brand-date" id="brandDate">&nbsp;</div>
+
+  <div class="hero-card">
+    <div class="hero-date" id="brandDate">&nbsp;</div>
+    <div class="hero-names" id="brandNames">Karoline &amp; Peter</div>
+    <div class="hero-divider"><span></span><span class="dot"></span><span></span></div>
+    <div class="hero-tagline">Hvor lenge snakker de egentlig?</div>
+    <div class="hero-lead">Gjett taletiden for hver taler — alene, som gruppe eller som bord. Den som treffer nærmest gjennom kvelden vinner.</div>
   </div>
-  <div class="lead">🎤 Meld på deg selv, en gruppe eller et bord — gjett hvor lang tid hver taler bruker og se hvem som traff nærmest når talen er ferdig!</div>
 
   <div id="winnerZone"></div>
 
   <div class="card" id="guessCard">
-    <h2>Gjett taletidene</h2>
-    <div class="sub">Gjett alene, som gruppe eller som bord — skriv inn ett tips per taler. Går dere sammen om et tips, er det nok at én person skriver det inn. Dere kan sende inn på nytt og oppdatere helt frem til hver taler starter.</div>
-    <label for="guestName">Navn / gruppe</label>
-    <input type="text" id="guestName" placeholder="F.eks. «Kari», «Gjeng fra jobben» eller «Tante Karis bord»" maxlength="60">
-    <div id="speakerInputs" style="margin-top:14px;"></div>
-    <button class="primary" id="submitBtn" style="width:100%;margin-top:16px;">Send inn gjetningene</button>
+    <h2>Ditt tips</h2>
+    <div class="sub">Ett tips per taler. Går dere sammen, er det nok at én sender inn. Du kan endre tipset helt frem til taleren starter.</div>
+    <label for="guestName">Navn eller gruppe</label>
+    <input type="text" id="guestName" placeholder="F.eks. «Kari», «Gjengen fra jobben» eller «Tante Karis bord»" maxlength="60">
+    <div id="speakerInputs" style="margin-top:20px;"></div>
+    <button class="primary" id="submitBtn" style="width:100%;margin-top:20px;">Send inn tipset</button>
     <div id="submitStatus"></div>
   </div>
 
   <div class="card" id="resultsCard">
-    <h2>🔮 Gjetninger &amp; resultater</h2>
-    <div class="sub">Her ser du med en gang hva alle har gjettet på hver taler. Fasit og poeng dukker opp så snart taleren er ferdig.</div>
+    <h2>Fasit &amp; tips</h2>
+    <div class="sub">Poeng dukker opp så snart taleren er ferdig.</div>
     <div id="resultsBody"></div>
   </div>
 
-  <div class="card" id="leaderboardCard" style="display:none;">
+  <div class="card lb-card" id="leaderboardCard" style="display:none;">
     <h2>Sammenlagt</h2>
-    <div class="sub">Poeng for hver taler legges sammen — den som gjetter nærmest gjennom hele kvelden vinner mest.</div>
+    <div class="sub">Alle talere lagt sammen.</div>
     <div id="leaderboardBody"></div>
   </div>
 
-  <div class="refresh-hint">Siden oppdaterer seg selv hvert 6. sekund</div>
+  <div class="refresh-hint">Oppdateres automatisk</div>
 </div>
 
 <script src="/assets/app.js"></script>
@@ -198,22 +325,23 @@
       }
       row.innerHTML =
         '<div class="name">'+escapeHtml(sp.name)+'</div>'+
-        '<input type="number" min="0" placeholder="min" data-speaker="'+sp.id+'" data-part="min" value="'+min+'">'+
+        '<span class="time-pair">'+
+        '<input type="number" min="0" placeholder="—" data-speaker="'+sp.id+'" data-part="min" value="'+min+'">'+
         '<span class="colon">:</span>'+
-        '<input type="number" min="0" max="59" placeholder="sek" data-speaker="'+sp.id+'" data-part="sec" value="'+sec+'">';
+        '<input type="number" min="0" max="59" placeholder="—" data-speaker="'+sp.id+'" data-part="sec" value="'+sec+'">'+
+        '</span>';
       speakerInputs.appendChild(row);
     });
   }
 
   function collectEntries(){
-    const entries = {};
-    speakerInputs.querySelectorAll('input[data-speaker]').forEach(() => {});
     const bySpeaker = {};
     speakerInputs.querySelectorAll('input[data-speaker]').forEach(inp => {
       const id = inp.getAttribute('data-speaker');
       bySpeaker[id] = bySpeaker[id] || {};
       bySpeaker[id][inp.getAttribute('data-part')] = inp.value;
     });
+    const entries = {};
     Object.keys(bySpeaker).forEach(id => {
       const v = bySpeaker[id];
       if(v.min !== '' || v.sec !== ''){
@@ -242,13 +370,13 @@
       localStorage.setItem('wg_guest_name', name);
       myEntries = { ...myEntries, ...entries };
       localStorage.setItem('wg_my_entries', JSON.stringify(myEntries));
-      submitStatus.innerHTML = '<div class="status-msg ok">Takk! Gjetningene til '+escapeHtml(name)+' er lagret. 🎉</div>';
+      submitStatus.innerHTML = '<div class="status-msg ok">Lagret. Du kan endre tipset frem til taleren starter.</div>';
       await loadAll();
     }catch(e){
       submitStatus.innerHTML = '<div class="status-msg err">Kunne ikke lagre gjetningene. Prøv igjen om litt.</div>';
     }
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Send inn gjetningene mine';
+    submitBtn.textContent = 'Send inn tipset';
   });
 
   function escapeHtml(str){
@@ -279,35 +407,28 @@
         // Taleren er ferdig: vis fasit, avvik og poeng (allerede regnet ut av backend)
         const guesses = sp.guesses || [];
 
-        html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="actual">'+A.fmt(sp.actualSeconds)+'</span></div>';
+        html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="actual"><span class="tag">Brukte</span><span class="val">'+A.fmt(sp.actualSeconds)+'</span></span></div>';
 
         if(guesses.length === 0){
           html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen gjettet på denne taleren.</div>';
         } else {
-          html += '<table class="lb"><thead><tr><th>Navn/gruppe</th><th class="num">Gjetning</th><th class="num">Avvik</th><th class="num">Poeng</th></tr></thead><tbody>';
+          html += '<div class="guess-grid">';
+          html += '<div class="guess-grid-head"><span>Navn</span><span>Tips</span><span>Avvik</span><span>Pt</span></div>';
           guesses.forEach(g => {
-            const closestTag = g.closest ? ' 🎯' : '';
-            const rowCls = g.isCouple ? ' class="couple-row"' : '';
-            html += '<tr'+rowCls+'><td>'+escapeHtml(g.name)+closestTag+'</td><td class="num">'+A.fmt(g.guess)+'</td><td class="num">'+A.fmt(g.diff)+'</td><td class="num">'+g.points+'</td></tr>';
+            const closestTag = g.closest ? ' <span class="closest-mark">◆</span>' : '';
+            const coupleTag = g.isCouple ? ' <span class="couple-tag">Brudeparet</span>' : '';
+            html += '<div class="guess-grid-row'+(g.closest?' closest':'')+'"><span>'+escapeHtml(g.name)+closestTag+coupleTag+'</span><span>'+A.fmt(g.guess)+'</span><span class="diff">'+A.fmt(g.diff)+'</span><span class="pts">'+g.points+'</span></div>';
           });
-          html += '</tbody></table>';
+          html += '</div>';
         }
       } else {
-        // Ikke ferdig ennå: vis kun hva folk har gjettet så langt, uten fasit
+        // Ikke ferdig ennå: vis kun antall innsendte tips, uten fasit eller innhold —
+        // selve gjetningene vises først når taleren er ferdig (se «Fasit & tips»).
         const guesses = sp.guesses || [];
         html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="pill wait">Venter</span></div>';
-
-        if(guesses.length === 0){
-          html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen har gjettet på denne ennå.</div>';
-        } else {
-          html += '<div class="guess-count">🔮 '+guesses.length+' tips sendt inn så langt</div>';
-          html += '<table class="lb"><thead><tr><th>Navn/gruppe</th><th class="num">Gjetning</th></tr></thead><tbody>';
-          guesses.forEach(g => {
-            const rowCls = g.isCouple ? ' class="couple-row"' : '';
-            html += '<tr'+rowCls+'><td>'+escapeHtml(g.name)+'</td><td class="num">'+A.fmt(g.guess)+'</td></tr>';
-          });
-          html += '</tbody></table>';
-        }
+        html += guesses.length === 0
+          ? '<div class="guess-count">Ingen har gjettet på denne ennå.</div>'
+          : '<div class="guess-count">'+guesses.length+' tips sendt inn så langt</div>';
       }
       html += '</div>';
     });
@@ -318,13 +439,11 @@
     const rows = lbData.leaderboard || [];
     if(rows.length > 0){
       leaderboardCard.style.display = '';
-      const medals = ['🥇','🥈','🥉'];
-      let lbHtml = '<table class="lb"><thead><tr><th>Plass</th><th>Navn/gruppe</th><th class="num">Poeng</th></tr></thead><tbody>';
+      let lbHtml = '<div class="lb-list">';
       rows.forEach((r,i) => {
-        const rowCls = r.isCouple ? ' class="couple-row"' : '';
-        lbHtml += '<tr'+rowCls+'><td>'+(medals[i]||('#'+(i+1)))+'</td><td>'+escapeHtml(r.name)+'</td><td class="num">'+r.points+'</td></tr>';
+        lbHtml += '<div class="lb-row"><span class="rank">'+(i+1)+'</span><span class="name">'+escapeHtml(r.name)+(r.isCouple?' <span class="couple-tag">Brudeparet</span>':'')+'</span><span class="pts">'+r.points+'</span></div>';
       });
-      lbHtml += '</tbody></table>';
+      lbHtml += '</div>';
       leaderboardBody.innerHTML = lbHtml;
     } else {
       leaderboardCard.style.display = 'none';

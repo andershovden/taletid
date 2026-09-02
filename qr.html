@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/assets/theme.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-  html,body{ background:#e9e2d3; }
+  html,body{ background:var(--paper); }
 
   /* ---------- Verktøylinje (skjules ved utskrift) ---------- */
   .toolbar{
@@ -26,7 +26,7 @@
   .toolbar .field.grow{ flex:1 1 260px; }
   .toolbar input[type=number]{ width:90px; }
   .toolbar textarea{
-    font-family:'Montserrat',sans-serif;
+    font-family:'Manrope',sans-serif;
     font-size:13px;
     width:100%;
     min-height:130px;
@@ -34,13 +34,13 @@
     border-radius:10px;
     border:1px solid var(--line);
     background:#fff;
-    color:var(--charcoal);
+    color:var(--ink);
     resize:vertical;
   }
   .toolbar textarea:focus{ outline:none; border-color:var(--gold); }
   .toolbar .url{
     font-size:12px;
-    color:var(--charcoal-soft);
+    color:var(--ink-soft);
     word-break:break-all;
     margin-bottom:14px;
   }
@@ -52,7 +52,7 @@
   }
   .toolbar .hint{
     font-size:11px;
-    color:var(--charcoal-soft);
+    color:var(--ink-soft);
     margin-top:10px;
     line-height:1.5;
   }
@@ -98,19 +98,20 @@
     gap:4mm;
   }
   .qr-page .brand-names{
-    font-family:'Cormorant Garamond',serif;
+    font-family:'Instrument Serif',serif;
     font-style:italic;
-    font-weight:600;
+    font-weight:400;
     font-size:clamp(30px,5.4vw,46px);
-    color:var(--gold);
-    letter-spacing:0.05em;
+    color:var(--ink);
+    letter-spacing:0.01em;
     line-height:1.1;
   }
   .qr-page .brand-date{
-    font-size:11px;
+    font-size:10px;
     text-transform:uppercase;
     letter-spacing:0.28em;
-    color:var(--charcoal-soft);
+    font-weight:700;
+    color:var(--ink-mute);
   }
   .qr-page .divider{
     width:60px;
@@ -120,15 +121,15 @@
     margin:5mm 0 0;
   }
   .qr-page .heading{
-    font-family:'Cormorant Garamond',serif;
-    font-weight:700;
-    font-size:clamp(24px,3.6vw,32px);
-    color:var(--charcoal);
+    font-family:'Instrument Serif',serif;
+    font-weight:400;
+    font-size:clamp(26px,3.8vw,34px);
+    color:var(--ink);
     margin-top:5mm;
   }
   .qr-page .lead{
     font-size:13px;
-    color:var(--charcoal-soft);
+    color:var(--ink-soft);
     line-height:1.6;
     max-width:400px;
     margin-top:3mm;
@@ -156,7 +157,7 @@
   }
   .qr-page .url-fallback{
     font-size:12px;
-    color:var(--charcoal-soft);
+    color:var(--ink-soft);
     letter-spacing:0.03em;
   }
 
@@ -169,8 +170,8 @@
   }
   .qr-page .responsibility{
     font-size:12.5px;
-    color:var(--charcoal);
-    background:var(--cream);
+    color:var(--ink);
+    background:var(--card-soft);
     border-radius:12px;
     padding:10px 16px;
     line-height:1.55;
@@ -178,9 +179,9 @@
   .qr-page .responsibility b{ color:var(--gold); }
   .qr-page .name-note{
     font-size:12px;
-    color:var(--charcoal-soft);
+    color:var(--ink-soft);
   }
-  .qr-page .name-note b{ color:var(--charcoal); }
+  .qr-page .name-note b{ color:var(--ink); }
 
   @media print{
     html,body{ background:#fff; }
