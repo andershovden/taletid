@@ -1226,10 +1226,16 @@
     // rader i talerlisten er markert ferdig, som var skjørt (se leaderboard.mjs).
     const allDone = !!lbData.allDone;
     finishedHeading.textContent = allDone ? '🏆 Vinneren er kåret!' : '🏆 Stillingen så langt';
-    crownWinnerBtn.classList.toggle('hidden', allDone);
 
     const finishedCount = lbData.finishedCount || 0;
     const totalCount = lbData.totalCount || 0;
+    // Vinneren skal aldri kunne kåres etter en taler midt i listen — kun etter at
+    // ALLE talere som står i listen akkurat nå er markert ferdig (da skjer det
+    // normalt automatisk, se finishSpeech). Knappen er derfor skjult helt frem til
+    // det punktet, og fungerer kun som en sikkerhetsventil for det sjeldne
+    // tilfellet der en glemt/ekstra taler hindrer den automatiske kåringen.
+    const canCrown = !allDone && totalCount > 0 && finishedCount >= totalCount;
+    crownWinnerBtn.classList.toggle('hidden', !canCrown);
     finishedProgress.textContent = (!allDone && totalCount > 0)
       ? '(' + finishedCount + ' av ' + totalCount + ' talere ferdig)'
       : '';
