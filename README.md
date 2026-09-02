@@ -74,7 +74,6 @@ endringer skal kunne publiseres til gjestene.
 | `netlify/functions/leaderboard.mjs` | API (`/api/leaderboard`) — **den eneste kilden til sannhet** for poeng og rangering. Regner ut avvik, poeng og en garantert unik ledertavle (med flere nivåer tie-break), slik at storskjermen og gjestesiden aldri kan vise ulike tall |
 | `netlify.toml` | Netlify-konfigurasjon: hvilken mappe som publiseres, hvor funksjonene ligger, og fine URL-er (`/admin`, `/qr`) |
 | `package.json` | Avhengighet til `@netlify/blobs`, som funksjonene bruker til lagring |
-| `leaderboard.mjs` (i rotmappen) | En duplikat-kopi av `netlify/functions/leaderboard.mjs`. Den brukes ikke av `netlify.toml` (som kun peker på `netlify/functions/`) og ser ut til å være en glemt kladd — kan trygt slettes |
 
 ## Hvordan poengsystemet fungerer
 
@@ -86,6 +85,9 @@ Når konferansieren markerer en taler som ferdig og legger inn faktisk taletid, 
 - **Sammenlagt ledertavle:** poengsum for alle talere lagt sammen, med flere
   tie-break-regler (lavest totalt avvik → flest "nærmest"-bonuser → hvem som sendte inn
   tips først → alfabetisk) slik at det aldri kan bli uavgjort om førsteplassen.
+- **Brudeparet deltar også:** brudeparets egen gjetning (lagt inn av konferansieren per
+  taler i `admin.html`) telles som et eget "bord" i konkurransen — med samme poeng,
+  samme sjanse til nærmest-bonus, og en tydelig 💑-merking i gjettelister og ledertavle.
 
 ## Data og lagring
 

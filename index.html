@@ -65,28 +65,11 @@
     color:var(--charcoal-soft);
     margin-bottom:8px;
   }
-  .couple-guess-row{
-    display:flex;
-    align-items:baseline;
-    gap:6px;
-    background:var(--cream);
-    border-radius:10px;
-    padding:8px 12px;
-    margin-bottom:10px;
-    font-size:13px;
-  }
-  .couple-guess-label{
-    color:var(--charcoal-soft);
-    font-weight:600;
-  }
-  .couple-guess-value{
-    font-family:'Cormorant Garamond',serif;
+  .couple-row td{
     font-weight:700;
-    font-size:17px;
-    color:var(--gold);
-    font-variant-numeric:tabular-nums;
-    margin-left:auto;
+    background:var(--cream);
   }
+  .couple-row td:first-child{ color:var(--gold); }
 </style>
 </head>
 <body>
@@ -290,9 +273,6 @@
     let html = '';
 
     speakers.forEach(sp => {
-      const coupleGuessHtml = sp.coupleGuessSeconds != null
-        ? '<div class="couple-guess-row">💑 <span class="couple-guess-label">Brudeparet gjettet:</span> <span class="couple-guess-value">'+A.fmt(sp.coupleGuessSeconds)+'</span></div>'
-        : '';
       html += '<div class="speaker-result">';
 
       if(sp.finished){
@@ -300,7 +280,6 @@
         const guesses = sp.guesses || [];
 
         html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="actual">'+A.fmt(sp.actualSeconds)+'</span></div>';
-        html += coupleGuessHtml;
 
         if(guesses.length === 0){
           html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen gjettet på denne taleren.</div>';
@@ -308,7 +287,8 @@
           html += '<table class="lb"><thead><tr><th>Bord</th><th class="num">Gjetning</th><th class="num">Avvik</th><th class="num">Poeng</th></tr></thead><tbody>';
           guesses.forEach(g => {
             const closestTag = g.closest ? ' 🎯' : '';
-            html += '<tr><td>'+escapeHtml(g.name)+closestTag+'</td><td class="num">'+A.fmt(g.guess)+'</td><td class="num">'+A.fmt(g.diff)+'</td><td class="num">'+g.points+'</td></tr>';
+            const rowCls = g.isCouple ? ' class="couple-row"' : '';
+            html += '<tr'+rowCls+'><td>'+escapeHtml(g.name)+closestTag+'</td><td class="num">'+A.fmt(g.guess)+'</td><td class="num">'+A.fmt(g.diff)+'</td><td class="num">'+g.points+'</td></tr>';
           });
           html += '</tbody></table>';
         }
@@ -316,7 +296,6 @@
         // Ikke ferdig ennå: vis kun hva folk har gjettet så langt, uten fasit
         const guesses = sp.guesses || [];
         html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="pill wait">Venter</span></div>';
-        html += coupleGuessHtml;
 
         if(guesses.length === 0){
           html += '<div class="empty-note" style="font-size:14px;padding:4px 0;">Ingen har gjettet på denne ennå.</div>';
@@ -324,7 +303,8 @@
           html += '<div class="guess-count">🔮 '+guesses.length+' '+(guesses.length===1?'bord har':'bord har')+' gjettet så langt</div>';
           html += '<table class="lb"><thead><tr><th>Bord</th><th class="num">Gjetning</th></tr></thead><tbody>';
           guesses.forEach(g => {
-            html += '<tr><td>'+escapeHtml(g.name)+'</td><td class="num">'+A.fmt(g.guess)+'</td></tr>';
+            const rowCls = g.isCouple ? ' class="couple-row"' : '';
+            html += '<tr'+rowCls+'><td>'+escapeHtml(g.name)+'</td><td class="num">'+A.fmt(g.guess)+'</td></tr>';
           });
           html += '</tbody></table>';
         }
@@ -341,7 +321,8 @@
       const medals = ['🥇','🥈','🥉'];
       let lbHtml = '<table class="lb"><thead><tr><th>Plass</th><th>Bord</th><th class="num">Poeng</th></tr></thead><tbody>';
       rows.forEach((r,i) => {
-        lbHtml += '<tr><td>'+(medals[i]||('#'+(i+1)))+'</td><td>'+escapeHtml(r.name)+'</td><td class="num">'+r.points+'</td></tr>';
+        const rowCls = r.isCouple ? ' class="couple-row"' : '';
+        lbHtml += '<tr'+rowCls+'><td>'+(medals[i]||('#'+(i+1)))+'</td><td>'+escapeHtml(r.name)+'</td><td class="num">'+r.points+'</td></tr>';
       });
       lbHtml += '</tbody></table>';
       leaderboardBody.innerHTML = lbHtml;
