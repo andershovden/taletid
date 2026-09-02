@@ -11,12 +11,17 @@ function corsHeaders() {
 }
 
 // Reservert for brudeparets egen gjetning i /api/leaderboard — et bord skal ikke
-// kunne late som om det er brudeparet ved å navngi seg det samme.
-const COUPLE_KEY = "__brudeparet__";
+// kunne late som om det er brudeparet ved å navngi seg noe som ligner. Sjekket mot
+// bokstaver/tall i navnet (uten mellomrom/emoji/tegn), slik at «Brudeparet», «💑
+// Brudeparet» og lignende varianter alle fanges opp, ikke bare den interne nøkkelen.
+function looksLikeCouple(rawName) {
+  const stripped = rawName.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+  return stripped === "brudeparet";
+}
 
 function keyFor(name) {
   const key = name.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 60);
-  return key === COUPLE_KEY ? key + "-bord" : key;
+  return looksLikeCouple(name) ? key + "-bord" : key;
 }
 
 export default async (req) => {
@@ -61,10 +66,14 @@ export default async (req) => {
 
     const all = (await store.get("guesses", { type: "json" })) || {};
     const key = keyFor(name);
+    // Hvis et bord navngir seg selv noe som ligner brudeparet, gi det et synlig
+    // annet visningsnavn — ellers ville det se ut som brudeparet dukker opp to
+    // ganger i gjettelisten (én gang som bordet, én gang som den ekte 💑-raden).
+    const displayName = looksLikeCouple(name) ? name + " (bord)" : name;
     const now = new Date().toISOString();
-    const existing = all[key] || { name, entries: {}, createdAt: now };
+    const existing = all[key] || { name: displayName, entries: {}, createdAt: now };
     all[key] = {
-      name,
+      name: displayName,
       entries: { ...existing.entries, ...cleanEntries },
       // createdAt = tidspunktet bordet FØRST sendte inn en gjetning. Brukes som en av
       // flere tie-breakere i /api/leaderboard, og skal aldri endres ved senere redigering.
