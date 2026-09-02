@@ -17,7 +17,7 @@ function corsHeaders() {
   };
 }
 
-function sanitizeState(input) {
+function sanitizeState(input, prev) {
   const out = {
     coupleNames: typeof input.coupleNames === "string" && input.coupleNames.trim()
       ? input.coupleNames.slice(0, 120)
@@ -40,6 +40,13 @@ function sanitizeState(input) {
       actualSeconds: Number.isFinite(sp.actualSeconds) ? Math.max(0, Math.round(sp.actualSeconds)) : null,
       coupleGuessSeconds: Number.isFinite(sp.coupleGuessSeconds) ? Math.max(0, Math.round(sp.coupleGuessSeconds)) : null
     }));
+  } else if (prev && Array.isArray(prev.speakers)) {
+    // Ingen "speakers"-liste sendt med i det hele tatt (i motsetning til en tom
+    // liste, som er et gyldig, eksplisitt "slett alle talere") — behold det som
+    // allerede er lagret i stedet for å tolke fravær som "slett alt". En klient
+    // med en feil i payloaden skal aldri kunne viske ut hele talerlisten og
+    // resultatene ved et uhell.
+    out.speakers = prev.speakers;
   }
   return out;
 }
@@ -67,7 +74,8 @@ export default async (req) => {
     } catch (e) {
       return new Response(JSON.stringify({ error: "invalid json" }), { status: 400, headers: corsHeaders() });
     }
-    const clean = sanitizeState(body || {});
+    const prev = (await store.get("state", { type: "json" })) || DEFAULT_STATE;
+    const clean = sanitizeState(body || {}, prev);
     await store.setJSON("state", clean);
     return new Response(JSON.stringify({ ok: true, state: clean }), { headers: corsHeaders() });
   }

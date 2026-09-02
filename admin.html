@@ -939,10 +939,6 @@
 
 <script>
 (function(){
-  const LS_SPEAKERS = 'toastmaster_speakers_v3';
-  const LS_COUPLE = 'toastmaster_couple_v1';
-  const LS_DATE = 'toastmaster_date_v1';
-
   const ORANGE_AT = 5*60;   // 5 min – felles regel for alle talere
   const RED_AT = 7*60;      // 7 min – felles regel for alle talere
   const STAGE1_MAX = 10;    // sek over RED_AT
@@ -953,38 +949,40 @@
     return 'sp-' + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
   }
 
-  let speakers = JSON.parse(localStorage.getItem(LS_SPEAKERS) || 'null') || [
-    {name:'Far til bruden', min:3, sec:0},
-    {name:'Forlover (brud)', min:4, sec:0},
-    {name:'Forlover (brudgom)', min:4, sec:0}
-  ];
-  speakers.forEach(sp => {
-    if(!sp.id) sp.id = genId();
-    if(sp.finished === undefined) sp.finished = false;
-    if(sp.actualSeconds === undefined) sp.actualSeconds = null;
-  });
+  // ---------- Datamodell ----------
+  // `server` er ALLTID nøyaktig det som sist ble bekreftet lagret på serveren —
+  // aldri en lokalt "antatt" versjon. Det finnes ingen localStorage-cache av
+  // talerlisten lenger: den var kilden til de vedvarende telle-/synk-bugsene
+  // (lokal og server-tilstand kunne gli fra hverandre og vise feil tall). Admin
+  // kjøres på ÉN enhet under selve bryllupet, så det er ingen grunn til å cache
+  // noe lokalt i utgangspunktet — serveren (Netlify Blobs) ER sannheten.
+  let server = { coupleNames: '', weddingDate: '', competitionFinished: false, speakers: [] };
+  // `lb` er siste kjente svar fra /api/leaderboard — ferdig utregnede poeng og
+  // rangering. Admin regner aldri ut poeng selv.
+  let lb = { allDone: false, finishedCount: 0, totalCount: 0, speakers: [], leaderboard: [] };
 
-  let currentIndex = 0;
+  // ---------- Lokal UI-/øktstate (styrer KUN hva som vises, aldri "sannheten") ----------
+  let scene = 'pause'; // 'pause' | 'live' | 'finished'
+  let speakerId = null; // id-en til taleren som er valgt (pause) eller i gang (live)
   let running = false;
   let elapsedMs = 0;
   let startTs = 0;
   let tickHandle = null;
+  // `busy` er true mens et "Ferdig ✓"/"kår vinner"-lagring er underveis. Blokkerer
+  // alle handlinger til lagringen enten lykkes eller feiler tydelig — dette er det
+  // som fjerner racen som gjorde at den nettopp avsluttede taleren ikke rakk å bli
+  // telt med før skjermen viste (foreldede) resultater.
+  let busy = false;
 
   let crossedRed = false;
   let overtimeStage = 0; // 0 none, 1 turtle, 2 turtle+yawn, 3 glitch
   let bannerHideTimer = null;
-
-  let scene = 'pause'; // 'pause' | 'live' | 'finished'
-  // Styrer eksplisitt om "vinneren er kåret" skal vises, satt av konferansieren via
-  // "Avslutt konkurransen"-knappen — utledes bevisst IKKE fra om alle talere i
-  // listen er markert ferdig (se leaderboard.mjs for hvorfor).
-  let competitionFinished = false;
-  // lbData kommer fra /api/leaderboard, som er den ENE kilden til sannhet for poeng og
-  // rangering (netlify/functions/leaderboard.mjs). Storskjermen gjør ingen egen
-  // poengberegning, slik at admin og gjettesiden aldri kan vise ulike resultater.
-  let lbData = { coupleNames: '', weddingDate: '', allDone: false, speakers: [], leaderboard: [] };
   let confettiInterval = null;
   let bubbleInterval = null;
+
+  // Utkast som redigeres i "Talere & innstillinger"-modalen. Kun dette utkastet
+  // muteres mens modalen er åpen — `server.speakers` røres aldri direkte.
+  let draft = null;
 
   const speakerNameEl = document.getElementById('speakerName');
   const targetValue = document.getElementById('targetValue');
@@ -1045,7 +1043,6 @@
   ringFg.style.strokeDasharray = CIRC;
   targetValue.textContent = fmt(ORANGE_AT) + '–' + fmt(RED_AT);
 
-  function plannedSeconds(sp){ return (sp.min||0)*60 + (sp.sec||0); }
   function fmt(totalSec){
     const s = Math.max(0, Math.round(totalSec));
     const m = Math.floor(s/60);
@@ -1058,26 +1055,15 @@
     return d.innerHTML;
   }
 
-  function saveSpeakers(){ localStorage.setItem(LS_SPEAKERS, JSON.stringify(speakers)); }
-  function saveBrand(){
-    localStorage.setItem(LS_COUPLE, coupleNamesInput.value);
-    localStorage.setItem(LS_DATE, weddingDateInput.value);
-  }
-
   function syncPauseBrand(){
     pauseLogo.textContent = coupleNamesDisplay.textContent;
     pauseDate.textContent = weddingDateDisplay.textContent;
   }
 
-  function loadBrand(){
-    const c = localStorage.getItem(LS_COUPLE);
-    const d = localStorage.getItem(LS_DATE);
-    if(c){ coupleNamesDisplay.textContent = c; coupleNamesInput.value = c; }
-    else { coupleNamesInput.value = coupleNamesDisplay.textContent; }
-    if(d){ weddingDateDisplay.textContent = d; weddingDateInput.value = d; }
-    else { weddingDateInput.value = weddingDateDisplay.textContent; }
-    syncPauseBrand();
-  }
+  // ---------- Avledet fra `server` — aldri lagret separat ----------
+  function orderedSpeakers(){ return server.speakers.slice().sort((a,b)=>(a.order||0)-(b.order||0)); }
+  function currentSpeaker(){ return orderedSpeakers().find(s => s.id === speakerId) || null; }
+  function firstUnfinished(){ return orderedSpeakers().find(s => !s.finished) || null; }
 
   // ---------- Backend-sync (Netlify Functions + Blobs) ----------
   async function apiGet(path){
@@ -1104,105 +1090,65 @@
     syncStatus.classList.toggle('error', text.indexOf('🔴') === 0);
   }
 
-  async function syncFromServer(){
-    try{
-      const server = await apiGet('/api/state');
-      if(server.coupleNames){
-        coupleNamesDisplay.textContent = server.coupleNames;
-        coupleNamesInput.value = server.coupleNames;
-      }
-      if(server.weddingDate){
-        weddingDateDisplay.textContent = server.weddingDate;
-        weddingDateInput.value = server.weddingDate;
-      }
-      competitionFinished = !!server.competitionFinished;
-      syncPauseBrand();
-      if(Array.isArray(server.speakers) && server.speakers.length > 0){
-        const byId = {};
-        speakers.forEach(sp => { byId[sp.id] = sp; });
-        const merged = server.speakers
-          .slice()
-          .sort((a,b)=>(a.order||0)-(b.order||0))
-          .map(srv => {
-            const local = byId[srv.id];
-            let min = local ? local.min : 0;
-            let sec = local ? local.sec : 0;
-            if(!min && !sec && srv.coupleGuessSeconds != null){
-              min = Math.floor(srv.coupleGuessSeconds/60);
-              sec = srv.coupleGuessSeconds % 60;
-            }
-            return {
-              id: srv.id,
-              name: srv.name,
-              min: min,
-              sec: sec,
-              finished: !!srv.finished,
-              actualSeconds: srv.actualSeconds != null ? srv.actualSeconds : null
-            };
-          });
-        speakers.forEach(sp => {
-          if(!server.speakers.find(s => s.id === sp.id)) merged.push(sp);
-        });
-        speakers = merged;
-        saveSpeakers();
-      }
-      setSyncStatus('🟢 Synkronisert med Netlify');
-      return true;
-    }catch(e){
-      setSyncStatus('🟡 Lokal modus (ingen tilkobling til Netlify)');
-      return false;
-    }
-  }
-
-  async function pushStateToServer(){
-    const payload = {
-      coupleNames: coupleNamesDisplay.textContent,
-      weddingDate: weddingDateDisplay.textContent,
-      competitionFinished,
-      speakers: speakers.map((sp,i) => ({
-        id: sp.id,
-        name: sp.name,
-        order: i,
-        finished: !!sp.finished,
-        actualSeconds: sp.actualSeconds != null ? sp.actualSeconds : null,
-        coupleGuessSeconds: plannedSeconds(sp) > 0 ? plannedSeconds(sp) : null
-      }))
+  // Tar imot et FERSKT, server-bekreftet state-objekt (fra GET /api/state eller
+  // ekkoet i svaret på POST /api/state) og gjør det til den nye sannheten.
+  function applyServerState(st){
+    server = {
+      coupleNames: st.coupleNames || 'Karoline & Peter',
+      weddingDate: st.weddingDate || '',
+      competitionFinished: !!st.competitionFinished,
+      speakers: Array.isArray(st.speakers) ? st.speakers : []
     };
-    try{
-      await apiPost('/api/state', payload);
-      setSyncStatus('🟢 Lagret og publisert til gjestenes side');
-      return true;
-    }catch(e){
-      // sync-status-teksten er skjult fra selve skjermbildet (den er ment for
-      // feilsøking i utviklerverktøy), så uten dette varselet ville en mislykket
-      // publisering gå helt ubemerket forbi — gjestene ville aldri se resultater
-      // eller poeng, uten at noen fikk vite hvorfor.
-      setSyncStatus('🟡 Kunne ikke publisere (sjekk internett) — lagret kun lokalt');
-      showBanner('⚠️ Kunne ikke publisere — sjekk internettforbindelsen!');
-      return false;
+    coupleNamesDisplay.textContent = server.coupleNames;
+    weddingDateDisplay.textContent = server.weddingDate;
+    syncPauseBrand();
+    // Hold valgt taler gyldig — hvis den ikke lenger finnes (f.eks. slettet i
+    // redigeringsmodalen), fall tilbake til den første uferdige, ellers den første.
+    if(!orderedSpeakers().some(s => s.id === speakerId)){
+      const first = firstUnfinished() || orderedSpeakers()[0] || null;
+      speakerId = first ? first.id : null;
     }
   }
 
-  // Publiserer automatisk til serveren litt etter at man har gjort en endring i talerlisten,
-  // slik at man ALDRI trenger å huske å trykke «Lagre» for at gjestenes side skal oppdateres.
-  let autoPushTimer = null;
-  function scheduleAutoPush(){
-    setSyncStatus('⏳ Publiserer endring...');
-    if(autoPushTimer) clearTimeout(autoPushTimer);
-    autoPushTimer = setTimeout(() => { pushStateToServer(); }, 1000);
+  async function loadInitial(){
+    try{
+      const [st, board] = await Promise.all([apiGet('/api/state'), apiGet('/api/leaderboard')]);
+      applyServerState(st);
+      lb = board;
+      setSyncStatus('🟢 Synkronisert med Netlify');
+    }catch(e){
+      setSyncStatus('🔴 Ingen kontakt med serveren');
+      showBanner('⚠️ Fikk ikke kontakt med serveren — sjekk internettforbindelsen og last siden på nytt.');
+    }
   }
 
-  async function pollGuesses(){
-    try{
-      lbData = await apiGet('/api/leaderboard');
-    }catch(e){ /* behold sist kjente data */ }
-    renderLiveGuesses();
+  async function refreshLeaderboard(){
+    lb = await apiGet('/api/leaderboard');
+  }
+
+  // ENESTE sted som skriver til serveren. Sender alltid FULL, gjeldende state
+  // (aldri en delvis patch), venter på at serveren bekrefter lagringen, og
+  // gjør KUN det bekreftede svaret til ny sannhet (`applyServerState`). Ingen
+  // optimistisk lokal oppdatering før serveren har sagt seg enig — det er
+  // nettopp det som tidligere skapte racen der en nettopp avsluttet taler ikke
+  // rakk å bli telt med.
+  async function pushState(patch){
+    const payload = {
+      coupleNames: patch.coupleNames !== undefined ? patch.coupleNames : server.coupleNames,
+      weddingDate: patch.weddingDate !== undefined ? patch.weddingDate : server.weddingDate,
+      competitionFinished: patch.competitionFinished !== undefined ? patch.competitionFinished : server.competitionFinished,
+      speakers: patch.speakers !== undefined ? patch.speakers : server.speakers
+    };
+    const res = await apiPost('/api/state', payload);
+    applyServerState(res.state);
+    setSyncStatus('🟢 Lagret og publisert til gjestenes side');
+    return server;
   }
 
   function renderLiveGuesses(){
     const sp = currentSpeaker();
     if(!sp){ liveGuessList.innerHTML = ''; liveRightCount.textContent = ''; return; }
-    const lbSpeaker = (lbData.speakers || []).find(s => s.id === sp.id);
+    const lbSpeaker = (lb.speakers || []).find(s => s.id === sp.id);
     const guesses = (lbSpeaker && lbSpeaker.guesses) || [];
     liveRightCount.textContent = guesses.length === 0
       ? 'Ingen bord har gjettet ennå'
@@ -1220,15 +1166,15 @@
     // rows kommer FERDIG UTREGNET OG SORTERT fra /api/leaderboard, med flernivås
     // tie-break (poeng → avvik → nærmest-bonuser → innsendingstidspunkt → navn), så
     // rows[0] er alltid én unik vinner — det kan aldri bli uavgjort.
-    const rows = lbData.leaderboard || [];
+    const rows = lb.leaderboard || [];
     // allDone kommer FERDIG UTLEDET fra /api/leaderboard, styrt av det eksplisitte
     // "Avslutt konkurransen"-trykket (state.competitionFinished) — ikke av om alle
     // rader i talerlisten er markert ferdig, som var skjørt (se leaderboard.mjs).
-    const allDone = !!lbData.allDone;
+    const allDone = !!lb.allDone;
     finishedHeading.textContent = allDone ? '🏆 Vinneren er kåret!' : '🏆 Stillingen så langt';
 
-    const finishedCount = lbData.finishedCount || 0;
-    const totalCount = lbData.totalCount || 0;
+    const finishedCount = lb.finishedCount || 0;
+    const totalCount = lb.totalCount || 0;
     // Vinneren skal aldri kunne kåres etter en taler midt i listen — kun etter at
     // ALLE talere som står i listen akkurat nå er markert ferdig (da skjer det
     // normalt automatisk, se finishSpeech). Knappen er derfor skjult helt frem til
@@ -1255,17 +1201,21 @@
   }
 
   async function crownWinner(){
-    if(competitionFinished) return;
-    crownWinnerBtn.disabled = true;
-    competitionFinished = true;
-    await pushStateToServer();
-    await pollGuesses();
-    renderFinishedLeaderboard();
-    crownWinnerBtn.disabled = false;
-    if(lbData.allDone) startBubbleLoop();
+    if(busy || server.competitionFinished) return;
+    busy = true;
+    syncControlsForScene();
+    try{
+      await pushState({ competitionFinished: true });
+      await refreshLeaderboard();
+      renderFinishedLeaderboard();
+      if(lb.allDone) startBubbleLoop();
+    }catch(e){
+      showBanner('⚠️ Kunne ikke kåre vinneren — sjekk internett og prøv igjen.');
+    }finally{
+      busy = false;
+      syncControlsForScene();
+    }
   }
-
-  function currentSpeaker(){ return speakers[currentIndex] || null; }
 
   function stopTick(){
     if(tickHandle){ clearInterval(tickHandle); tickHandle = null; }
@@ -1286,11 +1236,6 @@
     stopTick();
     tickHandle = setInterval(render, 100);
     render();
-  }
-
-  function toggleTimer(){
-    if(!currentSpeaker()) return;
-    if(running) pauseTimer(); else startTimer();
   }
 
   function clearFx(){
@@ -1336,7 +1281,7 @@
   }
 
   function resetTimer(){
-    if(scene !== 'live') return;
+    if(scene !== 'live' || busy) return;
     pauseTimer();
     elapsedMs = 0;
     resetOvertimeState();
@@ -1349,14 +1294,17 @@
     return ms/1000;
   }
 
-  function selectSpeaker(idx){
-    if(scene !== 'pause') return;
-    if(idx < 0 || idx >= speakers.length) return;
+  function stepSpeaker(dir){
+    if(scene !== 'pause' || busy) return;
+    const list = orderedSpeakers();
+    const idx = list.findIndex(s => s.id === speakerId);
+    const newIdx = idx + dir;
+    if(newIdx < 0 || newIdx >= list.length) return;
     pauseTimer();
     elapsedMs = 0;
-    currentIndex = idx;
+    speakerId = list[newIdx].id;
     resetOvertimeState();
-    updatePauseNext();
+    renderPauseNext();
     syncControlsForScene();
   }
 
@@ -1470,12 +1418,23 @@
 
   function syncControlsForScene(){
     const sp = currentSpeaker();
+    const list = orderedSpeakers();
+    const idx = list.findIndex(s => s.id === speakerId);
+    editBtn.disabled = scene === 'live' || busy;
+    if(busy){
+      startBtn.disabled = true;
+      finishBtn.disabled = true;
+      resetBtn.disabled = true;
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      return;
+    }
     if(scene === 'pause'){
       startBtn.disabled = !sp || sp.finished;
       finishBtn.disabled = true;
       resetBtn.disabled = true;
-      prevBtn.disabled = currentIndex === 0;
-      nextBtn.disabled = !sp || currentIndex === speakers.length - 1;
+      prevBtn.disabled = idx <= 0;
+      nextBtn.disabled = !sp || idx === -1 || idx >= list.length - 1;
     } else if(scene === 'live'){
       startBtn.disabled = true;
       finishBtn.disabled = false;
@@ -1492,14 +1451,16 @@
   }
 
   function updateHint(){
-    if(scene === 'pause') hintText.textContent = '← → = velg neste taler · Mellomrom = start talen · F = fullskjerm · E = rediger talere';
+    if(busy) hintText.textContent = 'Lagrer...';
+    else if(scene === 'pause') hintText.textContent = '← → = velg neste taler · Mellomrom = start talen · F = fullskjerm · E = rediger talere';
     else if(scene === 'live') hintText.textContent = 'Mellomrom / Enter = merk taler ferdig · R = nullstill klokken · F = fullskjerm';
     else hintText.textContent = 'Mellomrom = tilbake til pauseskjerm';
   }
 
-  function updatePauseNext(){
+  function renderPauseNext(){
+    const list = orderedSpeakers();
+    const allDone = list.length > 0 && list.every(s => s.finished);
     const sp = currentSpeaker();
-    const allDone = speakers.length > 0 && speakers.every(s => s.finished);
     if(allDone){
       pauseNext.innerHTML = '🎉 Alle talene er ferdig!';
     } else if(sp){
@@ -1510,67 +1471,69 @@
   }
 
   function startFromPause(){
-    if(!currentSpeaker()) return;
-    if(currentSpeaker().finished) return;
+    if(busy) return;
+    const sp = currentSpeaker();
+    if(!sp || sp.finished) return;
     setScene('live');
     renderLiveGuesses();
     startTimer();
   }
 
-  function finishSpeech(){
-    if(scene !== 'live') return;
-    if(!currentSpeaker()) return;
-    pauseTimer();
-    const finalElapsed = getElapsedSec();
+  // Dette er selve fiksen: HELE kjeden (lagre → hente ferske poeng → tegne
+  // resultatscenen) kjøres sekvensielt og ferdig, og skjermen låses (`busy`)
+  // til den er ferdig. Det er umulig å komme til resultatscenen med utdaterte
+  // tall, og et evt. nettverksfeil lar deg bare trykke «Ferdig ✓» igjen uten
+  // at den målte tiden går tapt.
+  async function finishSpeech(){
+    if(scene !== 'live' || busy) return;
     const sp = currentSpeaker();
-    sp.finished = true;
-    sp.actualSeconds = Math.round(finalElapsed);
-    saveSpeakers();
-    // Siste taler er ferdig => konkurransen avsluttes automatisk, uten at
-    // konferansieren må huske å trykke "Avslutt konkurransen"-knappen selv.
-    if(speakers.length > 0 && speakers.every(s => s.finished)){
-      competitionFinished = true;
-    }
-    advanceToNextUnfinished();
-    flyOutAndShowLeaderboard();
-  }
+    if(!sp) return;
+    pauseTimer();
+    const finalElapsed = Math.round(getElapsedSec());
 
-  // Flytter markøren videre til neste taler som ikke er ferdig ennå, slik at
-  // pauseskjermen viser riktig "neste ut" etter at man har markert en tale ferdig.
-  function advanceToNextUnfinished(){
-    for(let i = currentIndex + 1; i < speakers.length; i++){
-      if(!speakers[i].finished){ currentIndex = i; elapsedMs = 0; resetOvertimeState(); return; }
-    }
-    for(let i = 0; i < speakers.length; i++){
-      if(!speakers[i].finished){ currentIndex = i; elapsedMs = 0; resetOvertimeState(); return; }
-    }
-    // Alle er ferdige — behold currentIndex som den er.
-    elapsedMs = 0;
-  }
-
-  function flyOutAndShowLeaderboard(){
+    busy = true;
+    syncControlsForScene();
+    updateHint();
     liveLeft.classList.add('fly-out');
 
-    // Poeng/rangering regnes ut på serveren (/api/leaderboard) og krever at det nettopp
-    // publiserte resultatet er lagret der først. Vi venter derfor på HELE kjeden
-    // (publiser → hent ferske data) FØR vi bytter til resultatscenen og tegner den,
-    // slik at riktige poengsummer alltid vises — aldri en tom eller foreldet tavle
-    // fordi nettverket ikke rakk å bli ferdig innen fly-out-animasjonen var over.
+    const nextSpeakers = server.speakers.map(s =>
+      s.id === sp.id ? Object.assign({}, s, { finished: true, actualSeconds: finalElapsed }) : s
+    );
+    // Siste taler i listen er ferdig => konkurransen avsluttes automatisk, uten at
+    // konferansieren må huske å trykke "Avslutt konkurransen"-knappen selv.
+    const willAllBeDone = nextSpeakers.length > 0 && nextSpeakers.every(s => s.finished);
     const minDelay = new Promise((resolve) => setTimeout(resolve, 650));
-    // pushStateToServer() viser selv et synlig varsel på skjermen hvis publiseringen
-    // feiler, så vi trenger ikke gjenta det her.
-    const publishAndRefresh = pushStateToServer().then(() => pollGuesses());
 
-    Promise.all([minDelay, publishAndRefresh]).then(() => {
-      setScene('finished');
+    try{
+      await pushState({ speakers: nextSpeakers, competitionFinished: server.competitionFinished || willAllBeDone });
+      await refreshLeaderboard();
+      await minDelay;
+
+      elapsedMs = 0;
+      resetOvertimeState();
+      const next = firstUnfinished();
+      speakerId = next ? next.id : speakerId;
+
+      scene = 'finished';
+      appEl.setAttribute('data-scene', 'finished');
       liveLeft.classList.remove('fly-out');
       renderFinishedLeaderboard();
       startConfettiLoop();
       // Champagne-boblene (den store feiringen) vises både når konferansieren trykker
       // "Avslutt konkurransen" manuelt, og når siste taler nettopp ble ferdig og
-      // konkurransen dermed ble avsluttet automatisk (se finishSpeech).
-      if(lbData.allDone) startBubbleLoop();
-    });
+      // konkurransen dermed ble avsluttet automatisk.
+      if(lb.allDone) startBubbleLoop();
+    }catch(e){
+      await minDelay;
+      liveLeft.classList.remove('fly-out');
+      // Elapsed tid er IKKE nullstilt her — konferansieren trykker bare «Ferdig ✓»
+      // igjen (eller mellomrom), og samme tid sendes på nytt. Ingenting går tapt.
+      showBanner('⚠️ Kunne ikke lagre resultatet — trykk «Ferdig ✓» igjen (tiden er ikke tapt)!');
+    }finally{
+      busy = false;
+      syncControlsForScene();
+      updateHint();
+    }
   }
 
   function launchConfettiBurst(count){
@@ -1633,74 +1596,112 @@
   }
 
   function goToPause(){
-    if(scene !== 'finished') return;
+    if(scene !== 'finished' || busy) return;
     stopConfettiLoop();
     stopBubbleLoop();
     setScene('pause');
-    updatePauseNext();
+    renderPauseNext();
+  }
+
+  // ---------- Redigeringsmodal (jobber på et lokalt utkast, publiserer på endring) ----------
+  function speakerToDraft(sp){
+    return {
+      id: sp.id,
+      name: sp.name,
+      min: sp.coupleGuessSeconds != null ? Math.floor(sp.coupleGuessSeconds/60) : 0,
+      sec: sp.coupleGuessSeconds != null ? sp.coupleGuessSeconds % 60 : 0,
+      finished: !!sp.finished,
+      actualSeconds: sp.actualSeconds != null ? sp.actualSeconds : null
+    };
+  }
+  function draftToServerSpeakers(){
+    return draft.map((d,i) => ({
+      id: d.id,
+      name: d.name,
+      order: i,
+      finished: !!d.finished,
+      actualSeconds: d.actualSeconds != null ? d.actualSeconds : null,
+      coupleGuessSeconds: (d.min || d.sec) ? (d.min||0)*60 + (d.sec||0) : null
+    }));
+  }
+  // Publiserer utkastet til serveren og gjør svaret til ny sannhet. Brukes etter
+  // ALLE strukturelle endringer (lagt til/slettet/flyttet) og når et navn-/tid-felt
+  // mister fokus — aldri på hvert tastetrykk, og alltid ferdig avventet.
+  async function pushDraft(){
+    try{
+      await pushState({ speakers: draftToServerSpeakers() });
+      renderPauseNext();
+      syncControlsForScene();
+      return true;
+    }catch(e){
+      showBanner('⚠️ Kunne ikke lagre talerlisten — sjekk internett og prøv igjen.');
+      return false;
+    }
   }
 
   function renderEditor(){
     speakerListEditor.innerHTML = '';
-    speakers.forEach((sp, i) => {
+    (draft || []).forEach((d,i) => {
       const row = document.createElement('div');
-      row.className = 'speaker-row' + (i===currentIndex ? ' active' : '') + (sp.finished ? ' done' : '');
+      row.className = 'speaker-row' + (d.id===speakerId ? ' active' : '') + (d.finished ? ' done' : '');
 
       const nameInput = document.createElement('input');
       nameInput.type = 'text';
-      nameInput.value = sp.name;
-      nameInput.addEventListener('input', () => { sp.name = nameInput.value; saveSpeakers(); if(i===currentIndex){ updatePauseNext(); } scheduleAutoPush(); });
+      nameInput.value = d.name;
+      nameInput.addEventListener('input', () => { d.name = nameInput.value; });
+      nameInput.addEventListener('blur', () => { pushDraft(); });
 
       const minInput = document.createElement('input');
-      minInput.type = 'number'; minInput.min = 0; minInput.value = sp.min;
+      minInput.type = 'number'; minInput.min = 0; minInput.value = d.min;
       minInput.title = 'minutter (gjetning)';
-      minInput.addEventListener('input', () => { sp.min = parseInt(minInput.value)||0; saveSpeakers(); scheduleAutoPush(); });
+      minInput.addEventListener('input', () => { d.min = parseInt(minInput.value)||0; });
+      minInput.addEventListener('blur', () => { pushDraft(); });
 
       const sepSpan = document.createElement('span'); sepSpan.textContent = ':'; sepSpan.style.color='var(--charcoal-soft)';
 
       const secInput = document.createElement('input');
-      secInput.type = 'number'; secInput.min = 0; secInput.max = 59; secInput.value = sp.sec;
+      secInput.type = 'number'; secInput.min = 0; secInput.max = 59; secInput.value = d.sec;
       secInput.title = 'sekunder (gjetning)';
-      secInput.addEventListener('input', () => { sp.sec = Math.min(59, parseInt(secInput.value)||0); saveSpeakers(); scheduleAutoPush(); });
+      secInput.addEventListener('input', () => { d.sec = Math.min(59, parseInt(secInput.value)||0); });
+      secInput.addEventListener('blur', () => { pushDraft(); });
 
       const statusSpan = document.createElement('span');
       statusSpan.style.fontSize = '11px';
       statusSpan.style.color = 'var(--charcoal-soft)';
       statusSpan.style.flex = '0 0 auto';
       statusSpan.style.whiteSpace = 'nowrap';
-      statusSpan.textContent = sp.finished ? ('✅ ' + fmt(sp.actualSeconds||0)) : '⏳';
+      statusSpan.textContent = d.finished ? ('✅ ' + fmt(d.actualSeconds||0)) : '⏳';
 
       const upBtn = document.createElement('button');
       upBtn.className = 'row-btn'; upBtn.textContent = '↑'; upBtn.title = 'Flytt opp';
       upBtn.disabled = i===0;
-      upBtn.addEventListener('click', () => {
-        [speakers[i-1], speakers[i]] = [speakers[i], speakers[i-1]];
-        if(currentIndex===i) currentIndex=i-1; else if(currentIndex===i-1) currentIndex=i;
-        saveSpeakers(); renderEditor(); updatePauseNext(); syncControlsForScene(); pushStateToServer();
+      upBtn.addEventListener('click', async () => {
+        [draft[i-1], draft[i]] = [draft[i], draft[i-1]];
+        renderEditor();
+        await pushDraft();
       });
 
       const downBtn = document.createElement('button');
       downBtn.className = 'row-btn'; downBtn.textContent = '↓'; downBtn.title = 'Flytt ned';
-      downBtn.disabled = i===speakers.length-1;
-      downBtn.addEventListener('click', () => {
-        [speakers[i+1], speakers[i]] = [speakers[i], speakers[i+1]];
-        if(currentIndex===i) currentIndex=i+1; else if(currentIndex===i+1) currentIndex=i;
-        saveSpeakers(); renderEditor(); updatePauseNext(); syncControlsForScene(); pushStateToServer();
+      downBtn.disabled = i===draft.length-1;
+      downBtn.addEventListener('click', async () => {
+        [draft[i+1], draft[i]] = [draft[i], draft[i+1]];
+        renderEditor();
+        await pushDraft();
       });
 
       const delBtn = document.createElement('button');
       delBtn.className = 'row-btn danger'; delBtn.textContent = '✕'; delBtn.title = 'Slett';
-      delBtn.addEventListener('click', () => {
-        speakers.splice(i,1);
-        if(currentIndex >= speakers.length) currentIndex = Math.max(0, speakers.length-1);
-        pauseTimer(); elapsedMs = 0; resetOvertimeState();
-        saveSpeakers(); renderEditor(); updatePauseNext(); syncControlsForScene(); pushStateToServer();
+      delBtn.addEventListener('click', async () => {
+        draft.splice(i,1);
+        renderEditor();
+        await pushDraft();
       });
 
       row.append(nameInput, minInput, sepSpan, secInput, statusSpan, upBtn, downBtn, delBtn);
       speakerListEditor.appendChild(row);
     });
-    if(speakers.length === 0){
+    if(!draft || draft.length === 0){
       const empty = document.createElement('div');
       empty.className = 'empty-state';
       empty.textContent = 'Ingen talere lagt til ennå.';
@@ -1708,10 +1709,18 @@
     }
   }
 
-  addSpeakerBtn.addEventListener('click', () => {
+  function openEditor(){
+    draft = orderedSpeakers().map(speakerToDraft);
+    coupleNamesInput.value = server.coupleNames;
+    weddingDateInput.value = server.weddingDate;
+    renderEditor();
+    editModal.classList.remove('hidden');
+  }
+
+  addSpeakerBtn.addEventListener('click', async () => {
     const name = newName.value.trim();
-    if(!name) { newName.focus(); return; }
-    speakers.push({
+    if(!name){ newName.focus(); return; }
+    draft.push({
       id: genId(),
       name,
       min: parseInt(newMin.value)||0,
@@ -1720,7 +1729,8 @@
       actualSeconds: null
     });
     newName.value=''; newMin.value=''; newSec.value='';
-    saveSpeakers(); renderEditor(); updatePauseNext(); syncControlsForScene(); pushStateToServer();
+    renderEditor();
+    await pushDraft();
     newName.focus();
   });
 
@@ -1728,13 +1738,11 @@
     el.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); addSpeakerBtn.click(); } });
   });
 
-  startBtn.addEventListener('click', () => {
-    if(scene === 'pause') startFromPause();
-  });
+  startBtn.addEventListener('click', () => { if(scene === 'pause') startFromPause(); });
   finishBtn.addEventListener('click', finishSpeech);
   resetBtn.addEventListener('click', resetTimer);
-  prevBtn.addEventListener('click', () => selectSpeaker(currentIndex-1));
-  nextBtn.addEventListener('click', () => selectSpeaker(currentIndex+1));
+  prevBtn.addEventListener('click', () => stepSpeaker(-1));
+  nextBtn.addEventListener('click', () => stepSpeaker(1));
   finishedContinueBtn.addEventListener('click', goToPause);
   crownWinnerBtn.addEventListener('click', crownWinner);
 
@@ -1750,20 +1758,26 @@
   document.addEventListener('fullscreenchange', syncFsClass);
   document.addEventListener('webkitfullscreenchange', syncFsClass);
 
-  editBtn.addEventListener('click', () => {
-    renderEditor();
-    editModal.classList.remove('hidden');
-  });
+  editBtn.addEventListener('click', () => { if(!editBtn.disabled) openEditor(); });
+
   pullBtn.addEventListener('click', async () => {
     pullBtn.disabled = true;
     pullBtn.textContent = 'Henter...';
-    await syncFromServer();
-    renderEditor();
-    updatePauseNext();
-    syncControlsForScene();
+    try{
+      const st = await apiGet('/api/state');
+      applyServerState(st);
+      draft = orderedSpeakers().map(speakerToDraft);
+      renderEditor();
+      renderPauseNext();
+      syncControlsForScene();
+      setSyncStatus('🟢 Synkronisert med Netlify');
+    }catch(e){
+      setSyncStatus('🔴 Ingen kontakt med serveren');
+    }
     pullBtn.disabled = false;
     pullBtn.textContent = '🔄 Hent fra server';
   });
+
   resetAllBtn.addEventListener('click', async () => {
     const sure = confirm('Dette sletter ALLE talere, resultater og alle bords gjetninger permanent — både her og på gjestenes side. Er du sikker?');
     if(!sure) return;
@@ -1773,41 +1787,45 @@
     resetAllBtn.disabled = true;
     resetAllBtn.textContent = 'Nullstiller...';
     try{
-      await apiDelete('/api/state');
+      const res = await apiDelete('/api/state');
+      applyServerState(res.state);
+      draft = [];
       pauseTimer();
       elapsedMs = 0;
-      currentIndex = 0;
-      speakers = [];
-      competitionFinished = false;
       resetOvertimeState();
-      saveSpeakers();
-      coupleNamesDisplay.textContent = 'Karoline & Peter';
-      weddingDateDisplay.textContent = '4.–5. september 2026';
-      coupleNamesInput.value = coupleNamesDisplay.textContent;
-      weddingDateInput.value = weddingDateDisplay.textContent;
-      saveBrand();
-      syncPauseBrand();
       renderEditor();
-      updatePauseNext();
+      renderPauseNext();
       syncControlsForScene();
       setSyncStatus('🟢 Alt er nullstilt — både lokalt og på Netlify');
     }catch(e){
-      setSyncStatus('🟡 Kunne ikke nå serveren — prøv igjen');
+      setSyncStatus('🔴 Kunne ikke nå serveren — prøv igjen');
     }
     resetAllBtn.disabled = false;
     resetAllBtn.textContent = '🗑️ Nullstill alt';
   });
+
   closeModalBtn.addEventListener('click', async () => {
-    saveBrand();
-    coupleNamesDisplay.textContent = coupleNamesInput.value || 'Karoline & Peter';
-    weddingDateDisplay.textContent = weddingDateInput.value || '';
-    syncPauseBrand();
-    editModal.classList.add('hidden');
-    await pushStateToServer();
+    closeModalBtn.disabled = true;
+    closeModalBtn.textContent = 'Lagrer...';
+    const coupleNames = coupleNamesInput.value.trim() || 'Karoline & Peter';
+    const weddingDate = weddingDateInput.value.trim();
+    const ok = await pushState({ coupleNames, weddingDate, speakers: draftToServerSpeakers() }).then(() => true, () => false);
+    closeModalBtn.disabled = false;
+    closeModalBtn.textContent = 'Lagre & lukk';
+    if(ok){
+      renderPauseNext();
+      syncControlsForScene();
+      editModal.classList.add('hidden');
+    } else {
+      // Modalen holdes ÅPEN ved feil, slik at admin ikke mister endringene sine —
+      // de er fortsatt i `draft` og kan lagres på nytt med et nytt trykk.
+      showBanner('⚠️ Kunne ikke lagre — prøv «Lagre & lukk» igjen (endringene dine er ikke mistet).');
+    }
   });
 
   document.addEventListener('keydown', (e) => {
     if(!editModal.classList.contains('hidden')) return;
+    if(busy) return;
 
     if(e.code === 'Space'){
       e.preventDefault();
@@ -1821,24 +1839,27 @@
       else if(e.key === 'r' || e.key === 'R'){ resetTimer(); }
     }
     if(scene === 'pause'){
-      if(e.key === 'ArrowLeft'){ selectSpeaker(currentIndex-1); }
-      else if(e.key === 'ArrowRight'){ selectSpeaker(currentIndex+1); }
+      if(e.key === 'ArrowLeft'){ stepSpeaker(-1); }
+      else if(e.key === 'ArrowRight'){ stepSpeaker(1); }
     }
     if(e.key === 'f' || e.key === 'F'){ fullscreenBtn.click(); }
     else if(e.key === 'e' || e.key === 'E'){ editBtn.click(); }
   });
 
   (async function init(){
-    loadBrand();
     setScene('pause');
-    updatePauseNext();
-    await syncFromServer();
-    renderEditor();
-    updatePauseNext();
+    await loadInitial();
+    renderPauseNext();
+    renderLiveGuesses();
     syncControlsForScene();
-    if(speakers.length === 0){ editModal.classList.remove('hidden'); renderEditor(); }
-    pollGuesses();
-    setInterval(pollGuesses, 5000);
+    if(server.speakers.length === 0){
+      draft = [];
+      openEditor();
+    }
+    setInterval(async () => {
+      try{ await refreshLeaderboard(); }catch(e){ /* behold sist kjente data */ }
+      renderLiveGuesses();
+    }, 5000);
   })();
 })();
 </script>

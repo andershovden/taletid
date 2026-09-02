@@ -43,6 +43,16 @@ Alle tre sidene poller de samme API-ene et par ganger i minuttet, slik at storsk
 og gjestenes telefoner alltid viser samme tall — ingen av frontend-sidene regner ut
 poeng selv, det gjøres kun ett sted (se under).
 
+**Om pålitelighet:** `admin.html` cacher ikke lenger talerlisten lokalt (verken i
+`localStorage` eller i en egen JS-variabel som kan gli fra serveren) — serveren
+(`/api/state`) er den ENESTE sannheten. Når konferansieren trykker "Ferdig ✓" venter
+skjermen på at resultatet er lagret og hentet tilbake fra serveren, ett steg om
+gangen, før den viser noe som helst — det er umulig å komme til resultatscenen med
+utdaterte tall. Skjermen låses mens en lagring pågår, slik at et dobbeltklikk eller
+tastetrykk ikke kan starte to samtidige lagringer. Skulle en lagring feile (f.eks.
+mistet internett), vises det et tydelig varsel og konferansieren kan bare trykke
+"Ferdig ✓" igjen — den målte taletiden går aldri tapt.
+
 ## Hvordan kjøre det
 
 Appen krever [Netlify CLI](https://docs.netlify.com/cli/get-started/), fordi den bruker
