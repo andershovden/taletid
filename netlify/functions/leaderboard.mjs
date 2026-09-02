@@ -11,27 +11,28 @@ function corsHeaders() {
 
 // Poeng for hvor nær en gjetning var det faktiske resultatet: 50 poeng ved perfekt
 // treff, ned mot 0 poeng ved ca. 5 minutters (300 sek) avvik. Pluss en bonus på 10
-// poeng til bordet/bordene som traff aller nærmest på den enkelte taleren.
+// poeng til den/de som traff aller nærmest på den enkelte taleren.
 function pointsFor(diffSec) {
   return Math.max(0, Math.round(50 - diffSec / 6));
 }
 
-// Brudeparet deltar i konkurransen på lik linje med bordene, med denne faste
-// nøkkelen/navnet. Reservert slik at et bord ikke kan late som om det er brudeparet.
+// Brudeparet deltar i konkurransen på lik linje med de andre deltakerne, med denne
+// faste nøkkelen/navnet. Reservert slik at ingen andre kan late som om det er brudeparet.
 const COUPLE_KEY = "__brudeparet__";
 const COUPLE_NAME = "💑 Brudeparet";
 
 // Denne funksjonen er den ENE kilden til sannhet for poengsum og rangering, slik at
 // gjettesiden og storskjermen aldri kan vise ulike resultater. Brudeparets egen
-// gjetning (state.speakers[].coupleGuessSeconds) telles som et eget "bord" i
-// konkurransen (se COUPLE_KEY under), på lik linje med gjestenes bord. Rangeringen er
-// alltid strengt sortert — det kan aldri bli uavgjort om førsteplassen, fordi vi
-// legger på flere tie-breakere etter hverandre helt til rekkefølgen er unik:
+// gjetning (state.speakers[].coupleGuessSeconds) telles som en egen deltaker i
+// konkurransen (se COUPLE_KEY under), på lik linje med gjestenes påmeldinger.
+// Rangeringen er alltid strengt sortert — det kan aldri bli uavgjort om
+// førsteplassen, fordi vi legger på flere tie-breakere etter hverandre helt til
+// rekkefølgen er unik:
 //   1. Flest poeng totalt
-//   2. Lavest samlet avvik i sekunder (mest presise bord over hele kvelden)
+//   2. Lavest samlet avvik i sekunder (mest presise over hele kvelden)
 //   3. Flest ganger nærmest på en enkelt taler ("🎯 nærmest"-bonuser)
-//   4. Bordet som var først ute med å sende inn en gjetning
-//   5. Alfabetisk på bordnavn (garanterer en unik rekkefølge uansett)
+//   4. Den som var først ute med å sende inn en gjetning
+//   5. Alfabetisk på navn (garanterer en unik rekkefølge uansett)
 export default async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders() });
@@ -66,7 +67,7 @@ export default async (req) => {
       if (g == null) continue;
       rawGuesses.push({ key, name: rec.name, guess: g, createdAt: rec.createdAt || rec.updatedAt || null, isCouple: false });
     }
-    // Brudeparets gjetning telles som et eget "bord" i konkurransen, slik at den er
+    // Brudeparets gjetning telles som en egen deltaker i konkurransen, slik at den er
     // med i poengsummen og på ledertavlen akkurat som gjestenes gjetninger.
     if (sp.coupleGuessSeconds != null) {
       rawGuesses.push({ key: COUPLE_KEY, name: COUPLE_NAME, guess: sp.coupleGuessSeconds, createdAt: null, isCouple: true });
@@ -80,7 +81,7 @@ export default async (req) => {
         actualSeconds: null,
         coupleGuessSeconds: sp.coupleGuessSeconds != null ? sp.coupleGuessSeconds : null,
         // Brudeparet vises alltid øverst i listen (uansett gjetning), deretter
-        // bordene sortert på gjetning.
+        // de andre sortert på gjetning.
         guesses: rawGuesses
           .slice()
           .sort((a, b) => (a.isCouple !== b.isCouple ? (a.isCouple ? -1 : 1) : a.guess - b.guess))
@@ -110,7 +111,7 @@ export default async (req) => {
       actualSeconds: sp.actualSeconds,
       coupleGuessSeconds: sp.coupleGuessSeconds != null ? sp.coupleGuessSeconds : null,
       // Brudeparet vises alltid øverst i listen (uansett avvik), deretter
-      // bordene sortert fra nærmest til lengst unna.
+      // de andre sortert fra nærmest til lengst unna.
       guesses: scored
         .slice()
         .sort((a, b) => (a.isCouple !== b.isCouple ? (a.isCouple ? -1 : 1) : a.diff - b.diff))

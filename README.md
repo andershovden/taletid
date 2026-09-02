@@ -1,8 +1,9 @@
 # Taletid — gjettekonkurranse for bryllup 🎤💍
 
 En liten nettapp til bryllup: konferansieren (toastmasteren) tar tiden på talene på en
-storskjerm, mens bordene hos gjestene gjetter hvor lang tid hver taler bruker — via
-mobilen, med QR-kode. Poeng og ledertavle regnes ut automatisk og vises likt for alle.
+storskjerm, mens gjestene — alene, som gruppe eller som bord — gjetter hvor lang tid
+hver taler bruker via mobilen, med QR-kode. Poeng og ledertavle regnes ut automatisk og
+vises likt for alle.
 
 Appen er 100 % på norsk og bygget som en enkel statisk nettside med noen få
 Netlify-funksjoner i bakkant — ingen database å sette opp, ingen bygg-steg.
@@ -16,7 +17,7 @@ Det er tre sider som alle snakker med den samme lille "backend'en":
    - en pauseskjerm mellom talene,
    - en live-scene med stor nedtellingsklokke, fargekoder (grønn → gult ved 5 min →
      rødt ved 7 min, med økende "kom-igjen-nå"-effekter jo lenger over tiden man går),
-     og en liste over hva bordene har gjettet på taleren som pågår,
+     og en liste over hva alle har gjettet på taleren som pågår,
    - en resultatscene med ledertavle.
 
    Fra et redigeringsvindu i admin kan man legge inn talere, brudeparets egen gjetning
@@ -29,14 +30,15 @@ Det er tre sider som alle snakker med den samme lille "backend'en":
    sikkerhetsventil for konferansieren for det sjeldne tilfellet der en glemt eller
    ekstra taler i listen hindrer den automatiske kåringen.
 
-2. **`index.html`** (forsiden) — dette er **siden gjestene bruker på mobilen**. Hvert
-   bord blir enige om ett tips per taler, skriver inn et bordnavn og sender inn
-   gjetningene sine. Siden viser fortløpende hva alle bordene har gjettet, og når en
-   taler er ferdig vises fasit, avvik og poeng — pluss en samlet ledertavle og et
-   vinnerbanner (med konfetti 🎉) når alle talere er ferdige.
+2. **`index.html`** (forsiden) — dette er **siden gjestene bruker på mobilen**. Hver
+   gjest, gruppe eller bord blir enige om ett tips per taler, skriver inn et navn (eget
+   navn, gruppenavn eller bordnavn) og sender inn gjetningene sine. Siden viser
+   fortløpende hva alle har gjettet, og når en taler er ferdig vises fasit, avvik og
+   poeng — pluss en samlet ledertavle og et vinnerbanner (med konfetti 🎉) når alle
+   talere er ferdige.
 
 3. **`qr.html`** (åpnes på `/qr`) — en side som genererer utskriftsklare A4-ark med
-   QR-kode til gjestesiden (`index.html`), til å legge på hvert bord. Man velger antall
+   QR-kode til gjestesiden (`index.html`), til å legge på hvert bord eller dele med gjestene. Man velger antall
    eksemplarer og skriver ut.
 
 Alle tre sidene poller de samme API-ene et par ganger i minuttet, slik at storskjermen
@@ -80,13 +82,13 @@ talerlisten og resultatene.
 
 | Fil / mappe | Hva den gjør |
 |---|---|
-| `index.html` | Gjestesiden — bordene sender inn gjetninger og ser resultater/ledertavle |
+| `index.html` | Gjestesiden — gjestene (alene, som gruppe eller som bord) sender inn gjetninger og ser resultater/ledertavle |
 | `admin.html` | Storskjermen/kontrollpanelet konferansieren bruker til å ta tiden på talene og styre konkurransen |
 | `qr.html` | Genererer utskriftsklare A4-ark med QR-kode til gjestesiden |
 | `assets/app.js` | Delt JS-hjelpekode (tidsformatering, API-kall, poengformel, konfetti-animasjon) brukt av `index.html` og `qr.html` |
 | `assets/theme.css` | Delt styling (farger, fonter, kort-design) for gjestesiden og QR-siden |
 | `netlify/functions/state.mjs` | API (`/api/state`) for å hente/lagre talerliste, brudeparets navn/dato, hvilke talere som er ferdige, og om konkurransen er offisielt avsluttet |
-| `netlify/functions/guess.mjs` | API (`/api/guess`) der bordene sender inn sine gjetninger per taler |
+| `netlify/functions/guess.mjs` | API (`/api/guess`) der gjestene sender inn sine gjetninger per taler |
 | `netlify/functions/leaderboard.mjs` | API (`/api/leaderboard`) — **den eneste kilden til sannhet** for poeng og rangering. Regner ut avvik, poeng og en garantert unik ledertavle (med flere nivåer tie-break), slik at storskjermen og gjestesiden aldri kan vise ulike tall |
 | `netlify.toml` | Netlify-konfigurasjon: hvilken mappe som publiseres, hvor funksjonene ligger, og fine URL-er (`/admin`, `/qr`) |
 | `package.json` | Avhengighet til `@netlify/blobs`, som funksjonene bruker til lagring |
@@ -94,20 +96,20 @@ talerlisten og resultatene.
 ## Hvordan poengsystemet fungerer
 
 Når konferansieren markerer en taler som ferdig og legger inn faktisk taletid, regner
-`leaderboard.mjs` ut for hvert bords gjetning:
+`leaderboard.mjs` ut for hver deltakers gjetning:
 
 - **Poeng per taler:** 50 poeng ved perfekt treff, ned mot 0 poeng ved ca. 5 minutters
-  avvik, pluss 10 bonuspoeng til bordet/bordene som traff aller nærmest.
+  avvik, pluss 10 bonuspoeng til den/de som traff aller nærmest.
 - **Sammenlagt ledertavle:** poengsum for alle talere lagt sammen, med flere
   tie-break-regler (lavest totalt avvik → flest "nærmest"-bonuser → hvem som sendte inn
   tips først → alfabetisk) slik at det aldri kan bli uavgjort om førsteplassen.
 - **Brudeparet deltar også:** brudeparets egen gjetning (lagt inn av konferansieren per
-  taler i `admin.html`) telles som et eget "bord" i konkurransen — med samme poeng,
+  taler i `admin.html`) telles som en egen deltaker i konkurransen — med samme poeng,
   samme sjanse til nærmest-bonus, og en tydelig 💑-merking i gjettelister og ledertavle.
 
 ## Data og lagring
 
 Ingen ekte database — alt lagres i [Netlify Blobs](https://docs.netlify.com/blobs/overview/)
-under nøklene `state` (talerliste, brudepar, dato) og `guesses` (bordenes innsendte
+under nøklene `state` (talerliste, brudepar, dato) og `guesses` (gjestenes innsendte
 gjetninger). "Nullstill alt" i admin-panelet sletter begge, og er ment for bruk under
 testing før selve bryllupet.
