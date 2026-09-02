@@ -25,7 +25,10 @@ function keyFor(name) {
 }
 
 export default async (req) => {
-  const store = getStore("toastmaster");
+  // "strong" konsistens: se forklaring i state.mjs. Uten dette kunne en gjetning
+  // sendt inn rett før en taler ble markert ferdig i sjeldne tilfeller ikke bli
+  // sett av den påfølgende poengberegningen i leaderboard.mjs.
+  const store = getStore({ name: "toastmaster", consistency: "strong" });
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders() });

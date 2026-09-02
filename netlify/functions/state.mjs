@@ -52,7 +52,14 @@ function sanitizeState(input, prev) {
 }
 
 export default async (req) => {
-  const store = getStore("toastmaster");
+  // "strong" konsistens tvinger lesing/skriving til å hoppe over Netlify sin
+  // globale edge-cache og gå rett til kilden. Uten dette er lagringen KUN
+  // "eventually consistent" (standardverdi i @netlify/blobs), som betyr at en
+  // lesing rett etter en skriving kan få en utdatert kopi tilbake i et kort
+  // øyeblikk — det var akkurat dette som gjorde at resultatscenen i admin.html
+  // kunne vise "0 av N ferdig, ingen resultater" rett etter at en taler ble
+  // markert ferdig, selv om lagringen i seg selv hadde skjedd riktig.
+  const store = getStore({ name: "toastmaster", consistency: "strong" });
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders() });

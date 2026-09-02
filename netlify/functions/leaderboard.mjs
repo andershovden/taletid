@@ -40,7 +40,10 @@ export default async (req) => {
     return new Response("Method not allowed", { status: 405, headers: corsHeaders() });
   }
 
-  const store = getStore("toastmaster");
+  // "strong" konsistens: se forklaring i state.mjs. Dette er den mest kritiske
+  // av de tre funksjonene å rette, siden det er DENNE som leser talerlisten og
+  // gjetningene rett etter at admin.html nettopp har lagret et resultat.
+  const store = getStore({ name: "toastmaster", consistency: "strong" });
   const state = (await store.get("state", { type: "json" })) || { coupleNames: "", weddingDate: "", speakers: [] };
   const guesses = (await store.get("guesses", { type: "json" })) || {};
 
