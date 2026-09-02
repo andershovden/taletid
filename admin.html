@@ -940,6 +940,10 @@
   const LS_COUPLE = 'toastmaster_couple_v1';
   const LS_DATE = 'toastmaster_date_v1';
   const LS_ADMIN_KEY = 'toastmaster_admin_key';
+  // Må matche fallback-verdien i netlify/functions/state.mjs. Forhåndsutfylles i
+  // admin-nøkkelfeltet på et ferskt oppsett, slik at publisering fungerer med en
+  // gang uten at noen må vite at feltet må fylles ut manuelt først.
+  const DEFAULT_ADMIN_KEY = 'bryllup2026';
 
   const ORANGE_AT = 5*60;   // 5 min – felles regel for alle talere
   const RED_AT = 7*60;      // 7 min – felles regel for alle talere
@@ -1071,7 +1075,7 @@
     else { coupleNamesInput.value = coupleNamesDisplay.textContent; }
     if(d){ weddingDateDisplay.textContent = d; weddingDateInput.value = d; }
     else { weddingDateInput.value = weddingDateDisplay.textContent; }
-    if(k){ adminKeyInput.value = k; }
+    adminKeyInput.value = k || DEFAULT_ADMIN_KEY;
     syncPauseBrand();
   }
 
@@ -1172,8 +1176,17 @@
       setSyncStatus('🟢 Lagret og publisert til gjestenes side');
       return true;
     }catch(e){
-      if(e.status === 401) setSyncStatus('🔴 Feil admin-nøkkel — endringer ble IKKE publisert til gjestene!');
-      else setSyncStatus('🟡 Kunne ikke publisere (sjekk internett) — lagret kun lokalt');
+      // sync-status-teksten er skjult fra selve skjermbildet (den er ment for
+      // feilsøking i utviklerverktøy), så uten dette varselet ville en mislykket
+      // publisering (f.eks. feil admin-nøkkel) gå helt ubemerket forbi — gjestene
+      // ville aldri se resultater eller poeng, uten at noen fikk vite hvorfor.
+      if(e.status === 401){
+        setSyncStatus('🔴 Feil admin-nøkkel — endringer ble IKKE publisert til gjestene!');
+        showBanner('⚠️ Feil admin-nøkkel — ikke publisert til gjestene!');
+      } else {
+        setSyncStatus('🟡 Kunne ikke publisere (sjekk internett) — lagret kun lokalt');
+        showBanner('⚠️ Kunne ikke publisere — sjekk internettforbindelsen!');
+      }
       return false;
     }
   }
@@ -1521,12 +1534,9 @@
     // aldri en tom eller foreldet tavle fordi nettverket ikke rakk å bli ferdig
     // innen fly-out-animasjonen var over.
     const minDelay = new Promise((resolve) => setTimeout(resolve, 650));
-    const publishAndRefresh = pushStateToServer().then((ok) => {
-      if(!ok){
-        showBanner('⚠️ Kunne ikke publisere resultatet — sjekk admin-nøkkelen!');
-      }
-      return pollGuesses();
-    });
+    // pushStateToServer() viser selv et synlig varsel på skjermen hvis publiseringen
+    // feiler (feil admin-nøkkel e.l.), så vi trenger ikke gjenta det her.
+    const publishAndRefresh = pushStateToServer().then(() => pollGuesses());
 
     Promise.all([minDelay, publishAndRefresh]).then(() => {
       setScene('finished');
