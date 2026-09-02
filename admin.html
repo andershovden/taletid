@@ -578,7 +578,7 @@
   }
   .finished-row.leader{ background:var(--cream); border-radius:16px; }
   .finished-continue{
-    margin-top:1.4vh;
+    margin-top:0.6vh;
     font-size:11px;
     letter-spacing:0.12em;
     text-transform:uppercase;
@@ -588,6 +588,17 @@
     padding:8px 18px;
   }
   .finished-continue:hover{ border-color:var(--gold); color:var(--gold); }
+  .finished-progress{
+    font-size:12px;
+    color:var(--charcoal-soft);
+    letter-spacing:0.03em;
+  }
+  .crown-btn{
+    margin-top:1.4vh;
+    font-size:13px;
+    padding:11px 22px;
+  }
+  .crown-btn.hidden{ display:none; }
 
   .controls{
     display:flex;
@@ -758,12 +769,6 @@
   .live-guess-row.couple-row .table-name{ color:var(--gold); }
   .finished-row.couple-row{ background:var(--cream); }
   .finished-row.couple-row .table-name{ color:var(--gold); }
-  .sync-line{
-    font-size:11px;
-    color:var(--charcoal-soft);
-    margin:-6px 0 16px;
-  }
-
   #confettiLayer{
     position:fixed;inset:0;
     z-index:61;
@@ -881,8 +886,10 @@
   <div class="scene scene-finished" id="sceneFinished">
     <div class="finished-heading" id="finishedHeading">🏆 Stillingen</div>
     <div class="finished-sub" id="finishedSub"></div>
+    <div class="finished-progress" id="finishedProgress"></div>
     <div class="finished-prize" id="finishedPrize"></div>
     <div class="finished-leaderboard" id="finishedLeaderboard"></div>
+    <button class="primary crown-btn" id="crownWinnerBtn">🏆 Avslutt konkurransen &amp; kår vinner</button>
     <button class="finished-continue" id="finishedContinueBtn">Videre (mellomrom)</button>
   </div>
 
@@ -908,10 +915,6 @@
       <input type="text" id="coupleNamesInput" placeholder="Brudeparets navn">
       <input type="text" id="weddingDateInput" placeholder="Dato / sted">
     </div>
-    <div class="settings-fields">
-      <input type="text" id="adminKeyInput" placeholder="Admin-nøkkel (fra Netlify)">
-    </div>
-    <div class="sync-line">Admin-nøkkelen må matche miljøvariabelen <code>ADMIN_KEY</code> i Netlify-siden din (standard: <code>bryllup2026</code>).</div>
 
     <div id="speakerListEditor"></div>
 
@@ -939,11 +942,6 @@
   const LS_SPEAKERS = 'toastmaster_speakers_v3';
   const LS_COUPLE = 'toastmaster_couple_v1';
   const LS_DATE = 'toastmaster_date_v1';
-  const LS_ADMIN_KEY = 'toastmaster_admin_key';
-  // Må matche fallback-verdien i netlify/functions/state.mjs. Forhåndsutfylles i
-  // admin-nøkkelfeltet på et ferskt oppsett, slik at publisering fungerer med en
-  // gang uten at noen må vite at feltet må fylles ut manuelt først.
-  const DEFAULT_ADMIN_KEY = 'bryllup2026';
 
   const ORANGE_AT = 5*60;   // 5 min – felles regel for alle talere
   const RED_AT = 7*60;      // 7 min – felles regel for alle talere
@@ -977,6 +975,10 @@
   let bannerHideTimer = null;
 
   let scene = 'pause'; // 'pause' | 'live' | 'finished'
+  // Styrer eksplisitt om "vinneren er kåret" skal vises, satt av konferansieren via
+  // "Avslutt konkurransen"-knappen — utledes bevisst IKKE fra om alle talere i
+  // listen er markert ferdig (se leaderboard.mjs for hvorfor).
+  let competitionFinished = false;
   // lbData kommer fra /api/leaderboard, som er den ENE kilden til sannhet for poeng og
   // rangering (netlify/functions/leaderboard.mjs). Storskjermen gjør ingen egen
   // poengberegning, slik at admin og gjettesiden aldri kan vise ulike resultater.
@@ -1010,6 +1012,8 @@
   const finishedSub = document.getElementById('finishedSub');
   const finishedLeaderboard = document.getElementById('finishedLeaderboard');
   const finishedContinueBtn = document.getElementById('finishedContinueBtn');
+  const finishedProgress = document.getElementById('finishedProgress');
+  const crownWinnerBtn = document.getElementById('crownWinnerBtn');
   const hintText = document.getElementById('hintText');
 
   const startBtn = document.getElementById('startBtn');
@@ -1030,7 +1034,6 @@
   const newSec = document.getElementById('newSec');
   const coupleNamesInput = document.getElementById('coupleNamesInput');
   const weddingDateInput = document.getElementById('weddingDateInput');
-  const adminKeyInput = document.getElementById('adminKeyInput');
   const coupleNamesDisplay = document.getElementById('coupleNamesDisplay');
   const weddingDateDisplay = document.getElementById('weddingDateDisplay');
   const confettiLayer = document.getElementById('confettiLayer');
@@ -1059,7 +1062,6 @@
   function saveBrand(){
     localStorage.setItem(LS_COUPLE, coupleNamesInput.value);
     localStorage.setItem(LS_DATE, weddingDateInput.value);
-    localStorage.setItem(LS_ADMIN_KEY, adminKeyInput.value);
   }
 
   function syncPauseBrand(){
@@ -1070,12 +1072,10 @@
   function loadBrand(){
     const c = localStorage.getItem(LS_COUPLE);
     const d = localStorage.getItem(LS_DATE);
-    const k = localStorage.getItem(LS_ADMIN_KEY);
     if(c){ coupleNamesDisplay.textContent = c; coupleNamesInput.value = c; }
     else { coupleNamesInput.value = coupleNamesDisplay.textContent; }
     if(d){ weddingDateDisplay.textContent = d; weddingDateInput.value = d; }
     else { weddingDateInput.value = weddingDateDisplay.textContent; }
-    adminKeyInput.value = k || DEFAULT_ADMIN_KEY;
     syncPauseBrand();
   }
 
@@ -1087,18 +1087,13 @@
   }
   async function apiPost(path, body){
     const headers = { 'content-type': 'application/json' };
-    const key = adminKeyInput.value || localStorage.getItem(LS_ADMIN_KEY) || '';
-    if(key) headers['x-admin-key'] = key;
     const res = await fetch(path, { method:'POST', headers, body: JSON.stringify(body) });
     const data = await res.json().catch(()=>({}));
     if(!res.ok){ const err = new Error(data.error || ('POST failed: '+res.status)); err.status = res.status; throw err; }
     return data;
   }
   async function apiDelete(path){
-    const headers = {};
-    const key = adminKeyInput.value || localStorage.getItem(LS_ADMIN_KEY) || '';
-    if(key) headers['x-admin-key'] = key;
-    const res = await fetch(path, { method:'DELETE', headers });
+    const res = await fetch(path, { method:'DELETE' });
     const data = await res.json().catch(()=>({}));
     if(!res.ok){ const err = new Error(data.error || ('DELETE failed: '+res.status)); err.status = res.status; throw err; }
     return data;
@@ -1120,6 +1115,7 @@
         weddingDateDisplay.textContent = server.weddingDate;
         weddingDateInput.value = server.weddingDate;
       }
+      competitionFinished = !!server.competitionFinished;
       syncPauseBrand();
       if(Array.isArray(server.speakers) && server.speakers.length > 0){
         const byId = {};
@@ -1162,6 +1158,7 @@
     const payload = {
       coupleNames: coupleNamesDisplay.textContent,
       weddingDate: weddingDateDisplay.textContent,
+      competitionFinished,
       speakers: speakers.map((sp,i) => ({
         id: sp.id,
         name: sp.name,
@@ -1178,15 +1175,10 @@
     }catch(e){
       // sync-status-teksten er skjult fra selve skjermbildet (den er ment for
       // feilsøking i utviklerverktøy), så uten dette varselet ville en mislykket
-      // publisering (f.eks. feil admin-nøkkel) gå helt ubemerket forbi — gjestene
-      // ville aldri se resultater eller poeng, uten at noen fikk vite hvorfor.
-      if(e.status === 401){
-        setSyncStatus('🔴 Feil admin-nøkkel — endringer ble IKKE publisert til gjestene!');
-        showBanner('⚠️ Feil admin-nøkkel — ikke publisert til gjestene!');
-      } else {
-        setSyncStatus('🟡 Kunne ikke publisere (sjekk internett) — lagret kun lokalt');
-        showBanner('⚠️ Kunne ikke publisere — sjekk internettforbindelsen!');
-      }
+      // publisering gå helt ubemerket forbi — gjestene ville aldri se resultater
+      // eller poeng, uten at noen fikk vite hvorfor.
+      setSyncStatus('🟡 Kunne ikke publisere (sjekk internett) — lagret kun lokalt');
+      showBanner('⚠️ Kunne ikke publisere — sjekk internettforbindelsen!');
       return false;
     }
   }
@@ -1229,8 +1221,19 @@
     // tie-break (poeng → avvik → nærmest-bonuser → innsendingstidspunkt → navn), så
     // rows[0] er alltid én unik vinner — det kan aldri bli uavgjort.
     const rows = lbData.leaderboard || [];
+    // allDone kommer FERDIG UTLEDET fra /api/leaderboard, styrt av det eksplisitte
+    // "Avslutt konkurransen"-trykket (state.competitionFinished) — ikke av om alle
+    // rader i talerlisten er markert ferdig, som var skjørt (se leaderboard.mjs).
     const allDone = !!lbData.allDone;
     finishedHeading.textContent = allDone ? '🏆 Vinneren er kåret!' : '🏆 Stillingen så langt';
+    crownWinnerBtn.classList.toggle('hidden', allDone);
+
+    const finishedCount = lbData.finishedCount || 0;
+    const totalCount = lbData.totalCount || 0;
+    finishedProgress.textContent = (!allDone && totalCount > 0)
+      ? '(' + finishedCount + ' av ' + totalCount + ' talere ferdig)'
+      : '';
+
     if(rows.length === 0){
       finishedSub.textContent = 'Ingen gjetninger å vise ennå';
       finishedPrize.textContent = '';
@@ -1243,6 +1246,17 @@
     finishedLeaderboard.innerHTML = rows.map((r,i) =>
       '<div class="finished-row'+(i===0?' leader':'')+(r.isCouple?' couple-row':'')+'"><span class="medal">'+(medals[i]||('#'+(i+1)))+'</span><span class="table-name">'+escapeHtml(r.name)+'</span><span class="table-points">'+r.points+' p</span></div>'
     ).join('');
+  }
+
+  async function crownWinner(){
+    if(competitionFinished) return;
+    crownWinnerBtn.disabled = true;
+    competitionFinished = true;
+    await pushStateToServer();
+    await pollGuesses();
+    renderFinishedLeaderboard();
+    crownWinnerBtn.disabled = false;
+    if(lbData.allDone) startBubbleLoop();
   }
 
   function currentSpeaker(){ return speakers[currentIndex] || null; }
@@ -1524,18 +1538,16 @@
   }
 
   function flyOutAndShowLeaderboard(){
-    const allDone = speakers.length > 0 && speakers.every(s => s.finished);
     liveLeft.classList.add('fly-out');
 
     // Poeng/rangering regnes ut på serveren (/api/leaderboard) og krever at det nettopp
     // publiserte resultatet er lagret der først. Vi venter derfor på HELE kjeden
     // (publiser → hent ferske data) FØR vi bytter til resultatscenen og tegner den,
-    // slik at riktige poengsummer og riktig "vinner kåret"-tekst alltid vises —
-    // aldri en tom eller foreldet tavle fordi nettverket ikke rakk å bli ferdig
-    // innen fly-out-animasjonen var over.
+    // slik at riktige poengsummer alltid vises — aldri en tom eller foreldet tavle
+    // fordi nettverket ikke rakk å bli ferdig innen fly-out-animasjonen var over.
     const minDelay = new Promise((resolve) => setTimeout(resolve, 650));
     // pushStateToServer() viser selv et synlig varsel på skjermen hvis publiseringen
-    // feiler (feil admin-nøkkel e.l.), så vi trenger ikke gjenta det her.
+    // feiler, så vi trenger ikke gjenta det her.
     const publishAndRefresh = pushStateToServer().then(() => pollGuesses());
 
     Promise.all([minDelay, publishAndRefresh]).then(() => {
@@ -1543,7 +1555,8 @@
       liveLeft.classList.remove('fly-out');
       renderFinishedLeaderboard();
       startConfettiLoop();
-      if(allDone) startBubbleLoop();
+      // Champagne-boblene (den store feiringen) er forbeholdt det eksplisitte
+      // "Avslutt konkurransen"-øyeblikket (crownWinner), ikke hver enkelt tale.
     });
   }
 
@@ -1710,6 +1723,7 @@
   prevBtn.addEventListener('click', () => selectSpeaker(currentIndex-1));
   nextBtn.addEventListener('click', () => selectSpeaker(currentIndex+1));
   finishedContinueBtn.addEventListener('click', goToPause);
+  crownWinnerBtn.addEventListener('click', crownWinner);
 
   fullscreenBtn.addEventListener('click', () => {
     if(!document.fullscreenElement){ document.documentElement.requestFullscreen().catch(()=>{}); }
@@ -1751,6 +1765,7 @@
       elapsedMs = 0;
       currentIndex = 0;
       speakers = [];
+      competitionFinished = false;
       resetOvertimeState();
       saveSpeakers();
       coupleNamesDisplay.textContent = 'Karoline & Peter';
@@ -1764,7 +1779,7 @@
       syncControlsForScene();
       setSyncStatus('🟢 Alt er nullstilt — både lokalt og på Netlify');
     }catch(e){
-      setSyncStatus(e.status === 401 ? '🔴 Feil admin-nøkkel — fikk ikke nullstilt serveren' : '🟡 Kunne ikke nå serveren — prøv igjen');
+      setSyncStatus('🟡 Kunne ikke nå serveren — prøv igjen');
     }
     resetAllBtn.disabled = false;
     resetAllBtn.textContent = '🗑️ Nullstill alt';
