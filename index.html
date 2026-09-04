@@ -121,8 +121,12 @@
   .guess-grid-row span{text-align:right;font-variant-numeric:tabular-nums;}
   .guess-grid-row span:first-child{text-align:left;font-weight:600;font-variant-numeric:normal;}
   .guess-grid-row.closest{background:#fdf8ee;}
+  .guess-grid-row.couple{background:#fdf8ee;}
   .guess-grid-row .diff{color:var(--ink-faint);}
   .guess-grid-row .pts{font-weight:700;}
+  /* Talere som ikke er ferdige: samme rutenett, men uten avvik- og poengkolonne */
+  .guess-grid.pending .guess-grid-head,
+  .guess-grid.pending .guess-grid-row{grid-template-columns:1fr auto;}
   .closest-mark{color:var(--gold);}
   .couple-tag{
     font-size:8.5px;
@@ -222,7 +226,7 @@
 
   <div class="card" id="resultsCard">
     <h2>Fasit &amp; tips</h2>
-    <div class="sub">Poeng dukker opp så snart taleren er ferdig.</div>
+    <div class="sub">Se hva brudeparet og alle andre har tipset. Poeng dukker opp så snart taleren er ferdig.</div>
     <div id="resultsBody"></div>
   </div>
 
@@ -422,13 +426,24 @@
           html += '</div>';
         }
       } else {
-        // Ikke ferdig ennå: vis kun antall innsendte tips, uten fasit eller innhold —
-        // selve gjetningene vises først når taleren er ferdig (se «Fasit & tips»).
+        // Ikke ferdig ennå: ingen fasit og ingen poeng, men alle innsendte tips vises —
+        // brudeparets tips øverst (backend sorterer det først), slik at gjestene kan
+        // forholde seg til det både før og etter at de selv har sendt inn.
         const guesses = sp.guesses || [];
         html += '<div class="head"><span class="name">'+escapeHtml(sp.name)+'</span><span class="pill wait">Venter</span></div>';
-        html += guesses.length === 0
-          ? '<div class="guess-count">Ingen har gjettet på denne ennå.</div>'
-          : '<div class="guess-count">'+guesses.length+' tips sendt inn så langt</div>';
+
+        if(guesses.length === 0){
+          html += '<div class="guess-count">Ingen har gjettet på denne ennå.</div>';
+        } else {
+          html += '<div class="guess-count">'+guesses.length+' tips sendt inn så langt</div>';
+          html += '<div class="guess-grid pending">';
+          html += '<div class="guess-grid-head"><span>Navn</span><span>Tips</span></div>';
+          guesses.forEach(g => {
+            const coupleTag = g.isCouple ? ' <span class="couple-tag">Brudeparet</span>' : '';
+            html += '<div class="guess-grid-row'+(g.isCouple?' couple':'')+'"><span>'+escapeHtml(g.name)+coupleTag+'</span><span>'+A.fmt(g.guess)+'</span></div>';
+          });
+          html += '</div>';
+        }
       }
       html += '</div>';
     });
